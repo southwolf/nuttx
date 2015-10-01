@@ -1,9 +1,9 @@
 [submodule "Documentation"]
 	path = Documentation
-	url = https://bitbucket.org/nuttx/documentation.git
+	url = https://github.com/a1ien/nuttx_doc.git
 [submodule "configs"]
 	path = configs
-	url = https://bitbucket.org/nuttx/boards.git
+	url = https://github.com/a1ien/nuttx_boards.git
 [submodule "arch"]
 	path = arch
-	url = https://bitbucket.org/nuttx/arch.git
+	url = https://github.com/a1ien/nuttx_arch.git
