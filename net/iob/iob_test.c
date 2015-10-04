@@ -77,7 +77,7 @@ static void dump_chain(struct iob_s *iob)
   struct iob_s *head = iob;
   unsigned int pktlen;
   int n;
- 
+
   printf("=========================================================\n");
   printf("pktlen: %d\n", iob->io_pktlen);
 
@@ -199,10 +199,10 @@ int main(int argc, char **argv)
 
 void my_assert(bool value)
 {
- if (!value)
-   {
-    fprintf(stderr, "Assertion failed\n");
+  if (!value)
+    {
+      fprintf(stderr, "Assertion failed\n");
 
-    abort();
-  }
+      abort();
+    }
 }
