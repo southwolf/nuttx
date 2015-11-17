@@ -4,6 +4,7 @@
  *
  *   Copyright (C) 2015 Omni Hoverboards Inc. All rights reserved.
  *   Author: Paul Alexander Patience <paul-a.patience@polymtl.ca>
+ *   Updated by: Karim Keddam <karim.keddam@polymtl.ca>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -130,7 +131,7 @@ struct ms58xx_dev_s
  ****************************************************************************/
 /* CRC Calculation */
 
-static uint8_t ms58xx_crc(FAR const uint8_t *src, size_t len);
+static uint8_t ms58xx_crc(FAR uint16_t *src, uint8_t crcIndex);
 
 /* I2C Helpers */
 
@@ -187,29 +188,44 @@ static const struct file_operations g_fops =
  *
  ****************************************************************************/
 
-static uint8_t ms58xx_crc(FAR const uint8_t *src, size_t len)
+static uint8_t ms58xx_crc(FAR uint16_t *src, uint8_t crcIndex)
 {
-  uint16_t crc = 0;
-  size_t   i;
-  int      j;
+  uint16_t cnt;
+  uint16_t n_rem;
+  uint16_t crc_read;
+  uint8_t n_bit;
 
-  for (i = 0; i < len; i++)
+  n_rem = 0x00;
+  crc_read = src[crcIndex];
+  src[crcIndex] = (0xff00 & (src[7]));
+
+  for (cnt = 0; cnt < 16; cnt++)
     {
-      crc ^= src[i];
-
-      for (j = 0; j < 8; j++)
+      if (cnt % 2 == 1)
         {
-          bool xor = (crc & 0x8000) != 0;
+          n_rem ^= (uint16_t)((src[cnt>>1]) & 0x00FF);
+        }
+      else
+        {
+          n_rem ^= (uint16_t)(src[cnt>>1] >> 8);
+        }
 
-          crc <<= 1;
-          if (xor)
+      for (n_bit = 8; n_bit > 0; n_bit--)
+        {
+          if (n_rem & (0x8000))
             {
-              crc ^= 0x3000;
+              n_rem = (n_rem << 1) ^ 0x3000;
+            }
+          else
+            {
+              n_rem = (n_rem << 1);
             }
         }
     }
 
-  return (uint8_t)(crc >> 12);
+  n_rem = (0x000F & (n_rem >> 12));
+  src[crcIndex] = crc_read;
+  return (n_rem ^ 0x00);
 }
 
 /****************************************************************************
@@ -405,9 +421,12 @@ static int ms58xx_readprom(FAR struct ms58xx_dev_s *priv)
         break;
     }
 
+  /* We have to wait before the prom is ready is be read */
+
+  up_udelay(10000);
   for (i = 0; i < len; i++)
     {
-      ret = ms58xx_readu16(priv, MS58XX_PROM_REG+i*2, prom+i);
+      ret = ms58xx_readu16(priv, MS58XX_PROM_REG + i * 2, prom + i);
       if (ret < 0)
         {
           sndbg("ms58xx_readu16 failed: %d\n", ret);
@@ -417,9 +436,8 @@ static int ms58xx_readprom(FAR struct ms58xx_dev_s *priv)
 
   crcmask         = (uint16_t)0xf << crcshift;
   crc             = (uint8_t)((prom[crcindex] & crcmask) >> crcshift);
-  prom[crcindex] &= ~crcmask;
 
-  if (crc != ms58xx_crc((uint8_t *)prom, sizeof(prom)))
+  if (crc != ms58xx_crc(prom, crcindex))
     {
       sndbg("crc mismatch\n");
       return -ENODEV;
