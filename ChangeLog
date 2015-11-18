@@ -11105,3 +11105,12 @@
 	  (2015-11-17).
 	* drivers/sensors/ms58xx.c:  Fix some issues with initialization and with
 	  CRC calculation.  From Karim Keddam (2015-11-17).
+	* drivers/mtd/w25.c: Fix W25 FLASH driver page read/write logic. From
+	  Ken Petit (2015-11-18).
+	* drivers/mtd/smart.c: Fix a Smart wear-leveling bug. From Ken Petit
+	  (2015-11-18).
+	* arch/sim/src/up_spiflash.c:  Add support for W25 FLASH simulation.
+	  From Ken Petit (2015-11-18).
+	* configs/boardctl.h, Kconfig, include/sys/boardctl.h, and nuttx/board.h:
+	  Add a command to the boardctl() interface to obtain a board unique ID
+	  (2015-11-18).
