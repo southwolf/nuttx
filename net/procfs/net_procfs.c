@@ -1,8 +1,8 @@
 /****************************************************************************
- * fs/procfs/fs_skeleton.c
+ * net/procfs/net_procfs.c
  *
- *   Copyright (C) 2015 Ken Pettit. All rights reserved.
- *   Author: Ken Pettit <pettitkd@gmail.com>
+ *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,82 +45,43 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/arch.h>
-#include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/fs/dirent.h>
 
-#include <arch/irq.h>
+#include "procfs/procfs.h"
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS)
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-/* This enumeration identifies all of the thread attributes that can be
- * accessed via the procfs file system.
- */
-
-/* This structure describes one open "file" */
-
-struct skel_file_s
-{
-  struct procfs_file_s  base;        /* Base open file structure */
-
-  /* Add context specific data types for managing an open file here */
-};
-
-/* Level 1 is the directory of attributes */
-
-struct skel_level1_s
-{
-  struct procfs_dir_priv_s  base;    /* Base directory private data */
-
-  /* Add context specific data types here for managing the directory
-   * open / read / stat, etc.
-   */
-
-};
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
+    !defined(CONFIG_FS_PROCFS_EXCLUDE_NET)
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 /* File system methods */
 
-static int     skel_open(FAR struct file *filep, FAR const char *relpath,
+static int     netprocfs_open(FAR struct file *filep, FAR const char *relpath,
                  int oflags, mode_t mode);
-static int     skel_close(FAR struct file *filep);
-static ssize_t skel_read(FAR struct file *filep, FAR char *buffer,
+static int     netprocfs_close(FAR struct file *filep);
+static ssize_t netprocfs_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 
-static int     skel_dup(FAR const struct file *oldp,
+static int     netprocfs_dup(FAR const struct file *oldp,
                  FAR struct file *newp);
 
-static int     skel_opendir(FAR const char *relpath,
+static int     netprocfs_opendir(FAR const char *relpath,
                  FAR struct fs_dirent_s *dir);
-static int     skel_closedir(FAR struct fs_dirent_s *dir);
-static int     skel_readdir(FAR struct fs_dirent_s *dir);
-static int     skel_rewinddir(FAR struct fs_dirent_s *dir);
+static int     netprocfs_closedir(FAR struct fs_dirent_s *dir);
+static int     netprocfs_readdir(FAR struct fs_dirent_s *dir);
+static int     netprocfs_rewinddir(FAR struct fs_dirent_s *dir);
 
-static int     skel_stat(FAR const char *relpath, FAR struct stat *buf);
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
+static int     netprocfs_stat(FAR const char *relpath, FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -131,23 +92,20 @@ static int     skel_stat(FAR const char *relpath, FAR struct stat *buf);
  * with any compiler.
  */
 
-const struct procfs_operations skel_procfsoperations =
+const struct procfs_operations net_procfsoperations =
 {
-  skel_open,       /* open */
-  skel_close,      /* close */
-  skel_read,       /* read */
+  netprocfs_open,       /* open */
+  netprocfs_close,      /* close */
+  netprocfs_read,       /* read */
+  NULL,                 /* write */
+  netprocfs_dup,        /* dup */
 
-  /* TODO:  Decide if this driver supports write */
-  NULL,            /* write */
+  netprocfs_opendir,    /* opendir */
+  netprocfs_closedir,   /* closedir */
+  netprocfs_readdir,    /* readdir */
+  netprocfs_rewinddir,  /* rewinddir */
 
-  skel_dup,        /* dup */
-
-  skel_opendir,    /* opendir */
-  skel_closedir,   /* closedir */
-  skel_readdir,    /* readdir */
-  skel_rewinddir,  /* rewinddir */
-
-  skel_stat        /* stat */
+  netprocfs_stat        /* stat */
 };
 
 /****************************************************************************
@@ -155,13 +113,13 @@ const struct procfs_operations skel_procfsoperations =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: skel_open
+ * Name: netprocfs_open
  ****************************************************************************/
 
-static int skel_open(FAR struct file *filep, FAR const char *relpath,
-                     int oflags, mode_t mode)
+static int netprocfs_open(FAR struct file *filep, FAR const char *relpath,
+                          int oflags, mode_t mode)
 {
-  FAR struct skel_file_s *priv;
+  FAR struct netprocfs_file_s *priv;
 
   fvdbg("Open '%s'\n", relpath);
 
@@ -172,23 +130,28 @@ static int skel_open(FAR struct file *filep, FAR const char *relpath,
    */
 
   if (((oflags & O_WRONLY) != 0 || (oflags & O_RDONLY) == 0) &&
-      (skel_procfsoperations.write == NULL))
+      (net_procfsoperations.write == NULL))
     {
       fdbg("ERROR: Only O_RDONLY supported\n");
       return -EACCES;
     }
 
+  /* "net/stat" is the only acceptable value for the relpath */
+
+  if (strcmp(relpath, "net/stat") != 0)
+    {
+      fdbg("ERROR: relpath is '%s'\n", relpath);
+      return -ENOENT;
+    }
+
   /* Allocate a container to hold the task and attribute selection */
 
-  priv = (FAR struct skel_file_s *)kmm_zalloc(sizeof(struct skel_file_s));
+  priv = (FAR struct netprocfs_file_s *)kmm_zalloc(sizeof(struct netprocfs_file_s));
   if (!priv)
     {
       fdbg("ERROR: Failed to allocate file attributes\n");
       return -ENOMEM;
     }
-
-  /* TODO: Initialize the context specific data here */
-
 
   /* Save the index as the open-specific state in filep->f_priv */
 
@@ -197,16 +160,16 @@ static int skel_open(FAR struct file *filep, FAR const char *relpath,
 }
 
 /****************************************************************************
- * Name: skel_close
+ * Name: netprocfs_close
  ****************************************************************************/
 
-static int skel_close(FAR struct file *filep)
+static int netprocfs_close(FAR struct file *filep)
 {
-  FAR struct skel_file_s *priv;
+  FAR struct netprocfs_file_s *priv;
 
   /* Recover our private data from the struct file instance */
 
-  priv = (FAR struct skel_file_s *)filep->f_priv;
+  priv = (FAR struct netprocfs_file_s *)filep->f_priv;
   DEBUGASSERT(priv);
 
   /* Release the file attributes structure */
@@ -217,59 +180,63 @@ static int skel_close(FAR struct file *filep)
 }
 
 /****************************************************************************
- * Name: skel_read
+ * Name: netprocfs_read
  ****************************************************************************/
 
-static ssize_t skel_read(FAR struct file *filep, FAR char *buffer,
-                         size_t buflen)
+static ssize_t netprocfs_read(FAR struct file *filep, FAR char *buffer,
+                              size_t buflen)
 {
-  FAR struct skel_file_s *priv;
-  ssize_t ret;
+#ifdef CONFIG_NET_STATISTICS
+  FAR struct netprocfs_file_s *priv;
+  ssize_t nreturned;
 
-  fvdbg("buffer=%p buflen=%d\n", buffer, (int)buflen);
+  fvdbg("buffer=%p buflen=%lu\n", buffer, (unsigned long)buflen);
 
   /* Recover our private data from the struct file instance */
 
-  priv = (FAR struct skel_file_s *)filep->f_priv;
+  priv = (FAR struct netprocfs_file_s *)filep->f_priv;
   DEBUGASSERT(priv);
 
-  /* TODO: Provide the requested data */
+  /* Read the network layer statistics */
 
-  ret = 0;
+  nreturned = net_readstats(priv, buffer, buflen);
 
   /* Update the file offset */
 
-  if (ret > 0)
+  if (nreturned > 0)
     {
-      filep->f_pos += ret;
+      filep->f_pos += nreturned;
     }
 
-  return ret;
+  return nreturned;
+#else
+  return 0;
+#endif
 }
 
 /****************************************************************************
- * Name: skel_dup
+ * Name: netprocfs_dup
  *
  * Description:
  *   Duplicate open file data in the new file structure.
  *
  ****************************************************************************/
 
-static int skel_dup(FAR const struct file *oldp, FAR struct file *newp)
+static int netprocfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
-  FAR struct skel_file_s *oldpriv;
-  FAR struct skel_file_s *newpriv;
+  FAR struct netprocfs_file_s *oldpriv;
+  FAR struct netprocfs_file_s *newpriv;
 
   fvdbg("Dup %p->%p\n", oldp, newp);
 
   /* Recover our private data from the old struct file instance */
 
-  oldpriv = (FAR struct skel_file_s *)oldp->f_priv;
+  oldpriv = (FAR struct netprocfs_file_s *)oldp->f_priv;
   DEBUGASSERT(oldpriv);
 
   /* Allocate a new container to hold the task and attribute selection */
 
-  newpriv = (FAR struct skel_file_s *)kmm_zalloc(sizeof(struct skel_file_s));
+  newpriv = (FAR struct netprocfs_file_s *)kmm_zalloc(sizeof(struct netprocfs_file_s));
   if (!newpriv)
     {
       fdbg("ERROR: Failed to allocate file attributes\n");
@@ -278,7 +245,7 @@ static int skel_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* The copy the file attribtes from the old attributes to the new */
 
-  memcpy(newpriv, oldpriv, sizeof(struct skel_file_s));
+  memcpy(newpriv, oldpriv, sizeof(struct netprocfs_file_s));
 
   /* Save the new attributes in the new file structure */
 
@@ -287,16 +254,17 @@ static int skel_dup(FAR const struct file *oldp, FAR struct file *newp)
 }
 
 /****************************************************************************
- * Name: skel_opendir
+ * Name: netprocfs_opendir
  *
  * Description:
  *   Open a directory for read access
  *
  ****************************************************************************/
 
-static int skel_opendir(FAR const char *relpath, FAR struct fs_dirent_s *dir)
+static int netprocfs_opendir(FAR const char *relpath,
+                             FAR struct fs_dirent_s *dir)
 {
-  FAR struct skel_level1_s *level1;
+  FAR struct netprocfs_level1_s *level1;
 
   fvdbg("relpath: \"%s\"\n", relpath ? relpath : "NULL");
   DEBUGASSERT(relpath && dir && !dir->u.procfs);
@@ -305,8 +273,8 @@ static int skel_opendir(FAR const char *relpath, FAR struct fs_dirent_s *dir)
    * dirent structure.
    */
 
-  level1 = (FAR struct skel_level1_s *)
-     kmm_zalloc(sizeof(struct skel_level1_s));
+  level1 = (FAR struct netprocfs_level1_s *)
+     kmm_zalloc(sizeof(struct netprocfs_level1_s));
 
   if (!level1)
     {
@@ -314,13 +282,10 @@ static int skel_opendir(FAR const char *relpath, FAR struct fs_dirent_s *dir)
       return -ENOMEM;
     }
 
-  /* TODO:  Initialze context specific data */
-
-
   /* Initialze base structure components */
 
   level1->base.level    = 1;
-  level1->base.nentries = 0;
+  level1->base.nentries = 1;
   level1->base.index    = 0;
 
   dir->u.procfs = (FAR void *) level1;
@@ -328,15 +293,15 @@ static int skel_opendir(FAR const char *relpath, FAR struct fs_dirent_s *dir)
 }
 
 /****************************************************************************
- * Name: skel_closedir
+ * Name: netprocfs_closedir
  *
  * Description: Close the directory listing
  *
  ****************************************************************************/
 
-static int skel_closedir(FAR struct fs_dirent_s *dir)
+static int netprocfs_closedir(FAR struct fs_dirent_s *dir)
 {
-  FAR struct skel_level1_s *priv;
+  FAR struct netprocfs_level1_s *priv;
 
   DEBUGASSERT(dir && dir->u.procfs);
   priv = dir->u.procfs;
@@ -351,26 +316,20 @@ static int skel_closedir(FAR struct fs_dirent_s *dir)
 }
 
 /****************************************************************************
- * Name: skel_readdir
+ * Name: netprocfs_readdir
  *
  * Description: Read the next directory entry
  *
  ****************************************************************************/
 
-static int skel_readdir(FAR struct fs_dirent_s *dir)
+static int netprocfs_readdir(FAR struct fs_dirent_s *dir)
 {
-  FAR struct skel_level1_s *level1;
-  char  filename[16];
+  FAR struct netprocfs_level1_s *level1;
   int index;
   int ret;
 
   DEBUGASSERT(dir && dir->u.procfs);
   level1 = dir->u.procfs;
-
-  /* TODO: Perform device specific readdir function here.  This may
-   *       or may not involve validating the nentries variable
-   *       in the base depending on the implementation.
-   */
 
   /* Have we reached the end of the directory */
 
@@ -385,20 +344,17 @@ static int skel_readdir(FAR struct fs_dirent_s *dir)
       ret = -ENOENT;
     }
 
-  /* We are tranversing a subdirectory of task attributes */
+  /* Currently only one element in the directory */
 
   else
     {
       DEBUGASSERT(level1->base.level == 1);
+      DEBUGASSERT(level1->base.index <= 1);
 
-      /* TODO: Add device specific entries */
-
-      strcpy(filename, "dummy");
-
-      /* TODO:  Specify the type of entry */
+      /* Copy the one supported directory entry */
 
       dir->fd_dir.d_type = DTYPE_FILE;
-      strncpy(dir->fd_dir.d_name, filename, NAME_MAX + 1);
+      strncpy(dir->fd_dir.d_name, "stat", NAME_MAX + 1);
 
       /* Set up the next directory entry offset.  NOTE that we could use the
        * standard f_pos instead of our own private index.
@@ -412,15 +368,15 @@ static int skel_readdir(FAR struct fs_dirent_s *dir)
 }
 
 /****************************************************************************
- * Name: skel_rewindir
+ * Name: netprocfs_rewindir
  *
  * Description: Reset directory read to the first entry
  *
  ****************************************************************************/
 
-static int skel_rewinddir(FAR struct fs_dirent_s *dir)
+static int netprocfs_rewinddir(FAR struct fs_dirent_s *dir)
 {
-  FAR struct skel_level1_s *priv;
+  FAR struct netprocfs_level1_s *priv;
 
   DEBUGASSERT(dir && dir->u.procfs);
   priv = dir->u.procfs;
@@ -430,34 +386,42 @@ static int skel_rewinddir(FAR struct fs_dirent_s *dir)
 }
 
 /****************************************************************************
- * Name: skel_stat
+ * Name: netprocfs_stat
  *
  * Description: Return information about a file or directory
  *
  ****************************************************************************/
 
-static int skel_stat(FAR const char *relpath, FAR truct stat *buf)
+static int netprocfs_stat(FAR const char *relpath, FAR struct stat *buf)
 {
-  int ret = -ENOENT;
+  /* "net" and "net/stat" are the only acceptable values for the relpath */
 
-  /* TODO:  Decide if the relpath is valid and if it is a file
-   *        or a directory and set it's permissions.
-   */
-
-  buf->st_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR;
-  ret = OK;
+  if (strcmp(relpath, "net") == 0)
+    {
+      buf->st_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR;
+    }
+  else if (strcmp(relpath, "net/stat") == 0)
+    {
+      buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
+    }
+  else
+    {
+      fdbg("ERROR: relpath is '%s'\n", relpath);
+      return -ENOENT;
+    }
 
   /* File/directory size, access block size */
 
   buf->st_size    = 0;
-  buf->st_blksize = 0;
+  buf->st_blksize = 512;
   buf->st_blocks  = 0;
 
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */
+#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS &&
+        * !CONFIG_FS_PROCFS_EXCLUDE_NET */
