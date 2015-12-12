@@ -1,7 +1,7 @@
 /****************************************************************************
- * binfmt/libelf/libelf.h
+ * sched/module/module.h
  *
- *   Copyright (C) 2012, 2014 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@
  *
  ****************************************************************************/
 
-#ifndef __BINFMT_LIBELF_LIBELF_H
-#define __BINFMT_LIBELF_LIBELF_H
+#ifndef __SCHED_MODULE_MODULE_H
+#define __SCHED_MODULE_MODULE_H
 
 /****************************************************************************
  * Included Files
@@ -46,14 +46,125 @@
 #include <elf32.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/binfmt/elf.h>
+#include <nuttx/module.h>
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+/* This struct provides a description of the currently loaded instantiation
+ * of the kernel module.
+ */
+
+struct mod_loadinfo_s
+{
+  /* elfalloc is the base address of the memory that is allocated to hold the
+   * module image.
+   *
+   * The alloc[] array in struct module_s will hold memory that persists after
+   * the module has been loaded.
+   */
+
+  uintptr_t         textalloc;   /* .text memory allocated when module was loaded */
+  uintptr_t         datastart;   /* Start of.bss/.data memory in .text allocation */
+  size_t            textsize;    /* Size of the module .text memory allocation */
+  size_t            datasize;    /* Size of the module .bss/.data memory allocation */
+  off_t             filelen;     /* Length of the entire module file */
+  Elf32_Ehdr        ehdr;        /* Buffered module file header */
+  FAR Elf32_Shdr   *shdr;        /* Buffered module section headers */
+  uint8_t          *iobuffer;    /* File I/O buffer */
+
+  uint16_t          symtabidx;   /* Symbol table section index */
+  uint16_t          strtabidx;   /* String table section index */
+  uint16_t          buflen;      /* size of iobuffer[] */
+  int               filfd;       /* Descriptor for the file being loaded */
+};
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
 /****************************************************************************
- * Name: elf_verifyheader
+ * Name: mod_initialize
+ *
+ * Description:
+ *   This function is called to configure the library to process an kernel
+ *   module.
+ *
+ * Returned Value:
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int mod_initialize(FAR const char *filename,
+                   FAR struct mod_loadinfo_s *loadinfo);
+
+/****************************************************************************
+ * Name: mod_uninitialize
+ *
+ * Description:
+ *   Releases any resources committed by mod_init().  This essentially
+ *   undoes the actions of mod_initialize.
+ *
+ * Returned Value:
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int mod_uninitialize(FAR struct mod_loadinfo_s *loadinfo);
+
+/****************************************************************************
+ * Name: mod_load
+ *
+ * Description:
+ *   Loads the binary into memory, allocating memory, performing relocations
+ *   and initializing the data and bss segments.
+ *
+ * Returned Value:
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int mod_load(FAR struct mod_loadinfo_s *loadinfo);
+
+/****************************************************************************
+ * Name: mod_bind
+ *
+ * Description:
+ *   Bind the imported symbol names in the loaded module described by
+ *   'loadinfo' using the exported symbol values provided by 'symtab'.
+ *
+ * Returned Value:
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+struct symtab_s;
+int mod_bind(FAR struct mod_loadinfo_s *loadinfo,
+             FAR const struct symtab_s *exports, int nexports);
+
+/****************************************************************************
+ * Name: mod_unload
+ *
+ * Description:
+ *   This function unloads the object from memory. This essentially undoes
+ *   the actions of mod_load.  It is called only under certain error
+ *   conditions after the module has been loaded but not yet started.
+ *
+ * Returned Value:
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int mod_unload(struct mod_loadinfo_s *loadinfo);
+
+/****************************************************************************
+ * Name: mod_verifyheader
  *
  * Description:
  *   Given the header from a possible ELF executable, verify that it is
@@ -65,17 +176,14 @@
  *
  ****************************************************************************/
 
-int elf_verifyheader(FAR const Elf32_Ehdr *header);
+int mod_verifyheader(FAR const Elf32_Ehdr *header);
 
 /****************************************************************************
- * Name: elf_read
+ * Name: mod_read
  *
  * Description:
  *   Read 'readsize' bytes from the object file at 'offset'.  The data is
- *   read into 'buffer.' If 'buffer' is part of the ELF address environment,
- *   then the caller is responsibile for assuring that that address
- *   environment is in place before calling this function (i.e., that
- *   elf_addrenv_select() has been called if CONFIG_ARCH_ADDRENV=y).
+ *   read into 'buffer.'
  *
  * Returned Value:
  *   0 (OK) is returned on success and a negated errno is returned on
@@ -83,11 +191,11 @@ int elf_verifyheader(FAR const Elf32_Ehdr *header);
  *
  ****************************************************************************/
 
-int elf_read(FAR struct elf_loadinfo_s *loadinfo, FAR uint8_t *buffer,
+int mod_read(FAR struct mod_loadinfo_s *loadinfo, FAR uint8_t *buffer,
              size_t readsize, off_t offset);
 
 /****************************************************************************
- * Name: elf_loadshdrs
+ * Name: mod_loadshdrs
  *
  * Description:
  *   Loads section headers into memory.
@@ -98,10 +206,10 @@ int elf_read(FAR struct elf_loadinfo_s *loadinfo, FAR uint8_t *buffer,
  *
  ****************************************************************************/
 
-int elf_loadshdrs(FAR struct elf_loadinfo_s *loadinfo);
+int mod_loadshdrs(FAR struct mod_loadinfo_s *loadinfo);
 
 /****************************************************************************
- * Name: elf_findsection
+ * Name: mod_findsection
  *
  * Description:
  *   A section by its name.
@@ -116,11 +224,11 @@ int elf_loadshdrs(FAR struct elf_loadinfo_s *loadinfo);
  *
  ****************************************************************************/
 
-int elf_findsection(FAR struct elf_loadinfo_s *loadinfo,
+int mod_findsection(FAR struct mod_loadinfo_s *loadinfo,
                     FAR const char *sectname);
 
 /****************************************************************************
- * Name: elf_findsymtab
+ * Name: mod_findsymtab
  *
  * Description:
  *   Find the symbol table section.
@@ -131,10 +239,10 @@ int elf_findsection(FAR struct elf_loadinfo_s *loadinfo,
  *
  ****************************************************************************/
 
-int elf_findsymtab(FAR struct elf_loadinfo_s *loadinfo);
+int mod_findsymtab(FAR struct mod_loadinfo_s *loadinfo);
 
 /****************************************************************************
- * Name: elf_readsym
+ * Name: mod_readsym
  *
  * Description:
  *   Read the ELFT symbol structure at the specfied index into memory.
@@ -150,11 +258,11 @@ int elf_findsymtab(FAR struct elf_loadinfo_s *loadinfo);
  *
  ****************************************************************************/
 
-int elf_readsym(FAR struct elf_loadinfo_s *loadinfo, int index,
+int mod_readsym(FAR struct mod_loadinfo_s *loadinfo, int index,
                 FAR Elf32_Sym *sym);
 
 /****************************************************************************
- * Name: elf_symvalue
+ * Name: mod_symvalue
  *
  * Description:
  *   Get the value of a symbol.  The updated value of the symbol is returned
@@ -178,11 +286,11 @@ int elf_readsym(FAR struct elf_loadinfo_s *loadinfo, int index,
  *
  ****************************************************************************/
 
-int elf_symvalue(FAR struct elf_loadinfo_s *loadinfo, FAR Elf32_Sym *sym,
+int mod_symvalue(FAR struct mod_loadinfo_s *loadinfo, FAR Elf32_Sym *sym,
                  FAR const struct symtab_s *exports, int nexports);
 
 /****************************************************************************
- * Name: elf_freebuffers
+ * Name: mod_freebuffers
  *
  * Description:
  *  Release all working buffers.
@@ -193,10 +301,10 @@ int elf_symvalue(FAR struct elf_loadinfo_s *loadinfo, FAR Elf32_Sym *sym,
  *
  ****************************************************************************/
 
-int elf_freebuffers(FAR struct elf_loadinfo_s *loadinfo);
+int mod_freebuffers(FAR struct mod_loadinfo_s *loadinfo);
 
 /****************************************************************************
- * Name: elf_allocbuffer
+ * Name: mod_allocbuffer
  *
  * Description:
  *   Perform the initial allocation of the I/O buffer, if it has not already
@@ -208,10 +316,10 @@ int elf_freebuffers(FAR struct elf_loadinfo_s *loadinfo);
  *
  ****************************************************************************/
 
-int elf_allocbuffer(FAR struct elf_loadinfo_s *loadinfo);
+int mod_allocbuffer(FAR struct mod_loadinfo_s *loadinfo);
 
 /****************************************************************************
- * Name: elf_reallocbuffer
+ * Name: mod_reallocbuffer
  *
  * Description:
  *   Increase the size of I/O buffer by the specified buffer increment.
@@ -222,128 +330,6 @@ int elf_allocbuffer(FAR struct elf_loadinfo_s *loadinfo);
  *
  ****************************************************************************/
 
-int elf_reallocbuffer(FAR struct elf_loadinfo_s *loadinfo, size_t increment);
+int mod_reallocbuffer(FAR struct mod_loadinfo_s *loadinfo, size_t increment);
 
-/****************************************************************************
- * Name: elf_findctors
- *
- * Description:
- *   Find C++ static constructors.
- *
- * Input Parameters:
- *   loadinfo - Load state information
- *
- * Returned Value:
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_BINFMT_CONSTRUCTORS
-int elf_loadctors(FAR struct elf_loadinfo_s *loadinfo);
-#endif
-
-/****************************************************************************
- * Name: elf_loaddtors
- *
- * Description:
- *  Load pointers to static destructors into an in-memory array.
- *
- * Input Parameters:
- *   loadinfo - Load state information
- *
- * Returned Value:
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_BINFMT_CONSTRUCTORS
-int elf_loaddtors(FAR struct elf_loadinfo_s *loadinfo);
-#endif
-
-/****************************************************************************
- * Name: elf_addrenv_alloc
- *
- * Description:
- *   Allocate memory for the ELF image (textalloc and dataalloc). If
- *   CONFIG_ARCH_ADDRENV=n, textalloc will be allocated using kmm_zalloc() and
- *   dataalloc will be a offset from textalloc.  If CONFIG_ARCH_ADDRENV-y, then
- *   textalloc and dataalloc will be allocated using up_addrenv_create().  In
- *   either case, there will be a unique instance of textalloc and dataalloc
- *   (and stack) for each instance of a process.
- *
- * Input Parameters:
- *   loadinfo - Load state information
- *   textsize - The size (in bytes) of the .text address environment needed
- *     for the ELF image (read/execute).
- *   datasize - The size (in bytes) of the .bss/.data address environment
- *     needed for the ELF image (read/write).
- *   heapsize - The initial size (in bytes) of the heap address environment
- *     needed by the task.  This region may be read/write only.
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-int elf_addrenv_alloc(FAR struct elf_loadinfo_s *loadinfo, size_t textsize,
-                      size_t datasize, size_t heapsize);
-
-/****************************************************************************
- * Name: elf_addrenv_select
- *
- * Description:
- *   Temporarily select the task's address environemnt.
- *
- * Input Parameters:
- *   loadinfo - Load state information
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_ADDRENV
-#  define elf_addrenv_select(l) up_addrenv_select(&(l)->addrenv, &(l)->oldenv)
-#endif
-
-/****************************************************************************
- * Name: elf_addrenv_restore
- *
- * Description:
- *   Restore the address environment before elf_addrenv_select() was called..
- *
- * Input Parameters:
- *   loadinfo - Load state information
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_ADDRENV
-#  define elf_addrenv_restore(l) up_addrenv_restore(&(l)->oldenv)
-#endif
-
-/****************************************************************************
- * Name: elf_addrenv_free
- *
- * Description:
- *   Release the address environment previously created by
- *   elf_addrenv_alloc().  This function  is called only under certain error
- *   conditions after the module has been loaded but not yet started.
- *   After the module has been started, the address environment will
- *   automatically be freed when the module exits.
- *
- * Input Parameters:
- *   loadinfo - Load state information
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void elf_addrenv_free(FAR struct elf_loadinfo_s *loadinfo);
-
-#endif /* __BINFMT_LIBELF_LIBELF_H */
+#endif /* __SCHED_MODULE_MODULE_H */
