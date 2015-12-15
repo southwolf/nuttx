@@ -1,9 +1,8 @@
 ############################################################################
-# drivers/timers/Make.defs
-# These drivers support various timer devices
+# drivers/ioexpander/Make.defs
 #
 #   Copyright (C) 2015 Gregory Nutt. All rights reserved.
-#   Author: Gregory Nutt <gnutt@nuttx.org>
+#   Author: Sebastien Lorquet <sebastien@lorquet.fr>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -34,48 +33,20 @@
 #
 ############################################################################
 
-# Include timer drivers
+# Check if I/O expander support is enabled
 
-TMRDEPPATH =
-TMRVPATH =
+ifeq ($(CONFIG_IOEXPANDER),y)
 
-ifeq ($(CONFIG_WATCHDOG),y)
-  CSRCS += watchdog.c
-  TMRDEPPATH = --dep-path timers
-  TMRVPATH = :timers
+# Include the selected I/O expander drivers
+
+ifeq ($(CONFIG_IOEXPANDER_PCA9555),y)
+  CSRCS += pca9555.c
 endif
 
-ifeq ($(CONFIG_TIMER),y)
-  CSRCS += timer.c
-  TMRDEPPATH = --dep-path timers
-  TMRVPATH = :timers
+# Include ioexpander I/O device driver build support
+
+DEPPATH += --dep-path ioexpander
+VPATH += :ioexpander
+CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" $(TOPDIR)$(DELIM)drivers$(DELIM)ioexpander}
+
 endif
-
-ifeq ($(CONFIG_RTC_DSXXXX),y)
-  CSRCS += ds3231.c
-  TMRDEPPATH = --dep-path timers
-  TMRVPATH = :timers
-endif
-
-ifeq ($(CONFIG_RTC_PCF85263),y)
-  CSRCS += pcf85263.c
-  TMRDEPPATH = --dep-path timers
-  TMRVPATH = :timers
-endif
-
-ifeq ($(CONFIG_RTC_DRIVER),y)
-  CSRCS += rtc.c
-  TMRDEPPATH = --dep-path timers
-  TMRVPATH = :timers
-endif
-
-ifeq ($(CONFIG_TIMERS_CS2100CP),y)
-  CSRCS += cs2100-cp.c
-  TMRDEPPATH = --dep-path timers
-  TMRVPATH = :timers
-endif
-
-# Include timer build support (if any were selected)
-
-DEPPATH += $(TMRDEPPATH)
-VPATH += $(TMRVPATH)
