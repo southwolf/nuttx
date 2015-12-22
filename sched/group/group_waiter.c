@@ -1,7 +1,7 @@
 /****************************************************************************
- * mm/mm_heap/mm_zalloc.c
+ * sched/group/group_waiter.c
  *
- *   Copyright (C) 2007, 2009, 2014 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,31 +37,62 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+#include <sys/types.h>
 
-#include <string.h>
+#include <assert.h>
 
-#include <nuttx/mm/mm.h>
+#include "nuttx/sched.h"
+#include "group/group.h"
+
+#if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mm_zalloc
+ * Name:  group_addwaiter
  *
  * Description:
- *   mm_zalloc calls mm_malloc, then zeroes out the allocated chunk.
+ *   Increment the number of instances of waitpid that are waiting for this
+ *   group to exit.
+ *
+ * Assumptions:
+ *   Caller has assured mutually exclusive access to the group.
  *
  ****************************************************************************/
 
-FAR void *mm_zalloc(FAR struct mm_heap_s *heap, size_t size)
+void group_addwaiter(FAR struct task_group_s *group)
 {
-  FAR void *alloc = mm_malloc(heap, size);
-  if (alloc)
-    {
-       memset(alloc, 0, size);
-    }
-
-  return alloc;
+  group->tg_nwaiters++;
+  DEBUGASSERT(group->tg_nwaiters > 0);
 }
+
+/****************************************************************************
+ * Name:  group_addwaiter
+ *
+ * Description:
+ *   Decrement the number of instances of waitpid that are waiting for this
+ *   group to exit.  If the count goes to zero and deletion is pending, the
+ *   call group_free to release the dangling resources.
+ *
+ * Assumptions:
+ *   Caller has assured mutually exclusive access to the group.
+ *
+ ****************************************************************************/
+
+void group_delwaiter(FAR struct task_group_s *group)
+{
+  DEBUGASSERT(group->tg_nwaiters > 0);
+  group->tg_nwaiters--;
+  if (group->tg_nwaiters == 0 && (group->tg_flags & GROUP_FLAG_DELETED) != 0)
+    {
+      /* Release the group container (all other resources have already been
+       * freed).
+       */
+
+      sched_kfree(group);
+    }
+}
+
+#endif  /* CONFIG_SCHED_WAITPID && !CONFIG_SCHED_HAVE_PARENT */
