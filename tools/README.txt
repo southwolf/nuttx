@@ -394,6 +394,8 @@ mkromfsimg.sh
   may be mounted under /etc in the NuttX pseudo file system.
 
 mkdeps.c
+cnvwindeps.c
+mkwindeps.sh
 mknulldeps.sh
 -------------
 
@@ -411,13 +413,20 @@ mknulldeps.sh
 
   The mknulldeps.sh is a stub script that does essentially nothing.
 
+  mkwindeps.sh is a version that creates dependencies using the Windows
+  native toolchain.  That generates Windows native paths in the dependency
+  file.  But the mkwindeps.sh uses cnvwindeps.c to convert the Windows
+  paths to POSIX paths.  This adds some time to the Windows dependency
+  generation but is generally th best option available for that mixed
+  environment of Cygwin with a native Windows GCC toolchain.
+
   mkdeps.c generates mkdeps (on Linux) or mkdeps.exe (on Windows).
   However, this verison is still under-development.  It works well in
   the all POSIX environment or in the all Windows environment but also
   does not work well in mixed POSIX environment with a Windows toolchain.
   In that case, there are still issues with the conversion of things like
   'c:\Program Files' to 'c:program files' by bash.  Those issues may,
-  eventually be solvable but for now continue to use mknulldeps.sh in
+  eventually be solvable but for now continue to use mkwindeps.sh in
   that mixed environment.
 
 define.sh
