@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/netdb/lib_dnsgetaddr.c
+ * libc/netdb/lib_dnsclien.c
  *
- *   Copyright (C) 2007-2009, 2011, 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007, 2009, 2012, 2014-2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,60 +39,85 @@
 
 #include <nuttx/config.h>
 
-#include <sys/socket.h>
-
-#include <string.h>
+#include <sys/time.h>
+#include <unistd.h>
 #include <errno.h>
-#include <assert.h>
-
-#include <netinet/in.h>
+#include <debug.h>
 
 #include <nuttx/net/dns.h>
 
-#include <apps/netutils/netlib.h>
+#include "netdb/lib_dns.h"
 
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NETDB_DNSCLIENT)
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#if CONFIG_NSOCKET_DESCRIPTORS < 1
+#  error CONFIG_NSOCKET_DESCRIPTORS must be greater than zero
+#endif
+
+#if CONFIG_NET_SOCKOPTS < 1
+#  error CONFIG_NET_SOCKOPTS required by this logic
+#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: dns_getaddr
+ * Name: dns_bind
  *
  * Description:
- *   Get the DNS server IPv4 address
+ *   Initialize the DNS resolver and return a socket bound to the DNS name
+ *   server.  The name server was previously selected via dns_server().
  *
- * Parameters:
- *   ipaddr   The location to return the IPv4 address
+ * Input Parameters:
+ *   None
  *
- * Return:
- *   Zero (OK) is returned on success; A negated errno value is returned
- *   on failure.
+ * Returned Value:
+ *   On success, the bound, non-negative socket descriptor is returned.  A
+ *   negated errno value is returned on any failure.
  *
  ****************************************************************************/
 
-int dns_getaddr(FAR struct in_addr *inaddr)
+int dns_bind(void)
 {
-  struct sockaddr_in addr;
-  socklen_t addrlen;
-  int ret = -EINVAL;
+  struct timeval tv;
+  int errcode;
+  int sd;
+  int ret;
 
-  if (inaddr)
+  /* Has the DNS client been properly initialized? */
+
+  if (!dns_initialize())
     {
-      addrlen = sizeof(struct sockaddr_in);
-      ret = dns_getserver((FAR struct sockaddr *)&addr, &addrlen);
-      if (ret >= 0)
-        {
-          /* Sanity check */
-
-          DEBUGASSERT(addr.sin_family == AF_INET &&
-                      addrlen == sizeof(struct sockaddr_in));
-          memcpy(inaddr, &addr.sin_addr, sizeof(struct in_addr));
-        }
+      ndbg("ERROR: DNS client has not been initialized\n");
+      return -EDESTADDRREQ;
     }
 
-  return ret;
-}
+  /* Create a new socket */
 
-#endif /* CONFIG_NET_IPv4 && CONFIG_NETDB_DNSCLIENT */
+  sd = socket(PF_INET, SOCK_DGRAM, 0);
+  if (sd < 0)
+    {
+      errcode = get_errno();
+      ndbg("ERROR: socket() failed: %d\n", errcode);
+      return -errcode;
+    }
+
+  /* Set up a receive timeout */
+
+  tv.tv_sec  = 30;
+  tv.tv_usec = 0;
+
+  ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
+  if (ret < 0)
+    {
+      errcode = get_errno();
+      ndbg("ERROR: setsockopt() failed: %d\n", errcode);
+      close(sd);
+      return -errcode;
+    }
+
+  return sd;
+}
