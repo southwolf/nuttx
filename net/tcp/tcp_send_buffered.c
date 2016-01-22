@@ -507,9 +507,12 @@ static uint16_t psock_send_interrupt(FAR struct net_driver_s *dev,
     {
       nllvdbg("Lost connection: %04x\n", flags);
 
-      /* Report not connected */
+      if (psock->s_conn != NULL)
+        {
+          /* Report not connected */
 
-      net_lostconnection(psock, flags);
+          net_lostconnection(psock, flags);
+        }
 
       /* Free write buffers and terminate polling */
 
@@ -1046,7 +1049,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
       WRB_SEQNO(wrb) = (unsigned)-1;
       WRB_NRTX(wrb)  = 0;
-      WRB_COPYIN(wrb, (FAR uint8_t *)buf, len);
+      result = WRB_COPYIN(wrb, (FAR uint8_t *)buf, len);
 
       /* Dump I/O buffer chain */
 
@@ -1065,7 +1068,6 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
       send_txnotify(psock, conn);
       net_unlock(save);
-      result = len;
     }
 
   /* Set the socket state to idle */
