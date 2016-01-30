@@ -61,7 +61,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/arch.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/i2c.h>
+#include <nuttx/i2c/i2c_master.h>
 #include <nuttx/wqueue.h>
 
 #include <nuttx/input/touchscreen.h>
@@ -165,7 +165,7 @@ struct mxt_dev_s
    * lower half configuration data.
    */
 
-  FAR struct i2c_dev_s *i2c;
+  FAR struct i2c_master_s *i2c;
   FAR const struct mxt_lower_s *lower;
 
   /* This is the allocated array of object information */
@@ -1850,7 +1850,7 @@ errout_with_objtab:
  *
  ****************************************************************************/
 
-int mxt_register(FAR struct i2c_dev_s *i2c,
+int mxt_register(FAR struct i2c_master_s *i2c,
                  FAR const struct mxt_lower_s * const lower, int minor)
 {
   FAR struct mxt_dev_s *priv;

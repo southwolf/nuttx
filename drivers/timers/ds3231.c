@@ -45,7 +45,7 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/i2c.h>
+#include <nuttx/i2c/i2c_master.h>
 #include <nuttx/timers/ds3231.h>
 
 #include "ds3231.h"
@@ -108,7 +108,7 @@
 
 struct ds3231_dev_s
 {
-  FAR struct i2c_dev_s *i2c;  /* Contained reference to the I2C bus driver */
+  FAR struct i2c_master_s *i2c;  /* Contained reference to the I2C bus driver */
 };
 
 /************************************************************************************
@@ -237,7 +237,7 @@ static int rtc_bcd2bin(uint8_t value)
  *
  ************************************************************************************/
 
-int dsxxxx_rtc_initialize(FAR struct i2c_dev_s *i2c)
+int dsxxxx_rtc_initialize(FAR struct i2c_master_s *i2c)
 {
   /* Remember the i2c device and claim that the RTC is enabled */
 

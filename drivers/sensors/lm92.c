@@ -49,7 +49,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/i2c.h>
+#include <nuttx/i2c/i2c_master.h>
 #include <nuttx/sensors/lm92.h>
 
 #if defined(CONFIG_I2C) && defined(CONFIG_LM92)
@@ -69,9 +69,9 @@
 
 struct lm92_dev_s
 {
-  FAR struct i2c_dev_s *i2c; /* I2C interface */
-  uint8_t addr;              /* I2C address */
-  bool fahrenheit;           /* true: temperature will be reported in Fahrenheit */
+  FAR struct i2c_master_s *i2c; /* I2C interface */
+  uint8_t addr;                 /* I2C address */
+  bool fahrenheit;              /* true: temperature will be reported in Fahrenheit */
 };
 
 /****************************************************************************
@@ -595,7 +595,7 @@ static int lm92_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  *
  ****************************************************************************/
 
-int lm92_register(FAR const char *devpath, FAR struct i2c_dev_s *i2c,
+int lm92_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
                   uint8_t addr)
 {
   FAR struct lm92_dev_s *priv;

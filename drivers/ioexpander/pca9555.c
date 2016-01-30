@@ -48,7 +48,7 @@
 #include <debug.h>
 
 #include <nuttx/irq.h>
-#include <nuttx/i2c.h>
+#include <nuttx/i2c/i2c_master.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/ioexpander/ioexpander.h>
 
@@ -587,7 +587,7 @@ static int pca9555_interrupt(int irq, FAR void *context)
  *
  ****************************************************************************/
 
-FAR struct ioexpander_dev_s *pca9555_initialize(FAR struct i2c_dev_s *i2cdev,
+FAR struct ioexpander_dev_s *pca9555_initialize(FAR struct i2c_master_s *i2cdev,
                                                 FAR struct pca9555_config_s *config)
 {
   FAR struct pca9555_dev_s *pcadev;

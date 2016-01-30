@@ -129,7 +129,7 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/i2c.h>
+#include <nuttx/i2c/i2c_master.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/lcd/lcd.h>
 #include <nuttx/lcd/ssd1306.h>
@@ -807,7 +807,7 @@ static int ssd1306_setcontrast(struct lcd_dev_s *dev, unsigned int contrast)
 #ifdef CONFIG_LCD_SSD1306_SPI
 FAR struct lcd_dev_s *ssd1306_initialize(FAR struct spi_dev_s *dev, unsigned int devno)
 #else
-FAR struct lcd_dev_s *ssd1306_initialize(FAR struct i2c_dev_s *dev, unsigned int devno)
+FAR struct lcd_dev_s *ssd1306_initialize(FAR struct i2c_master_s *dev, unsigned int devno)
 #endif
 {
   FAR struct ssd1306_dev_s  *priv = &g_oleddev;

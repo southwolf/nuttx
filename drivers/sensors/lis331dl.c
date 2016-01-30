@@ -46,7 +46,7 @@
 #include <stdio.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/i2c.h>
+#include <nuttx/i2c/i2c_master.h>
 #include <nuttx/sensors/lis331dl.h>
 
 #if defined(CONFIG_I2C) && defined(CONFIG_I2C_TRANSFER) && defined(CONFIG_LIS331DL)
@@ -93,7 +93,7 @@
 
 struct lis331dl_dev_s
 {
-  struct i2c_dev_s        *i2c;
+  struct i2c_master_s     *i2c;
   uint8_t                  address;
   struct lis331dl_vector_s a;
   uint8_t                  cr1;
@@ -217,7 +217,7 @@ static int lis331dl_readregs(FAR struct lis331dl_dev_s *dev)
  * Public Functions
  ****************************************************************************/
 
-FAR struct lis331dl_dev_s *lis331dl_init(FAR struct i2c_dev_s *i2c,
+FAR struct lis331dl_dev_s *lis331dl_init(FAR struct i2c_master_s *i2c,
                                          uint16_t address)
 {
   FAR struct lis331dl_dev_s * dev;
