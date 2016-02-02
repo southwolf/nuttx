@@ -11437,4 +11437,11 @@
 	  Any bug reports of bug fixes will be much appreciated (2016-02-01).
 	* drivers/i2c/i2c_driver.c:  Add an I2C character drivers to support
 	  raw I2C data transfers for test applications (2016-02-02).
+	* I2C_RESET:  Eliminate up_i2creset().  It should not be a global function;
+	  Now it is an I2C interface method (2016-02-02).
+	* I2C: Rename up_i2cinitialize and up_i2cuninitilize to follow the correct
+	  naming convention.  These are not common interfaces used by the OS;
+	  these are MCU-specific interfaces used only be MCU-specific code.  The
+	  the correct naming is xyz_i2cbus_initialize and xzy_i2cbus_uninitialize
+	  where xzy is the MCU mnemonic (2016-02-02).
 
