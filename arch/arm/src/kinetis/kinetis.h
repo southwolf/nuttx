@@ -143,8 +143,8 @@
 #define PIN_ALT2_OUTPUT        (_PIN_MODE_ALT2 | _PIN_OUTPUT)
 #define PIN_ALT2_FAST          (_PIN_MODE_ALT2 | _PIN_OUTPUT_FAST)
 #define PIN_ALT2_SLOW          (_PIN_MODE_ALT2 | _PIN_OUTPUT_SLOW)
-#define PIN_ALT2_OPENDRAIN     (_PIN_MODE_ALT2 | _PIN_OUTPUT_LOWDRIVE)
-#define PIN_ALT2_LOWDRIVE      (_PIN_MODE_ALT2 | _PIN_OUTPUT_OPENDRAIN)
+#define PIN_ALT2_OPENDRAIN     (_PIN_MODE_ALT2 | _PIN_OUTPUT_OPENDRAIN)
+#define PIN_ALT2_LOWDRIVE      (_PIN_MODE_ALT2 | _PIN_OUTPUT_LOWDRIVE)
 #define PIN_ALT2_HIGHDRIVE     (_PIN_MODE_ALT2 | _PIN_OUTPUT_HIGHDRIVE)
 
 #define PIN_ALT3               _PIN_MODE_ALT3
@@ -652,7 +652,7 @@ int kinetis_spi2cmddata(FAR struct spi_dev_s *dev, enum spi_dev_e devid, bool cm
  *
  ****************************************************************************/
 
-#if defined(CONFIG_KINETIS_SPI0) || defined(CONFIG_KINETIS_SPI0) || defined(CONFIG_KINETIS_SPI2)
+#if defined(CONFIG_KINETIS_SPI0) || defined(CONFIG_KINETIS_SPI1) || defined(CONFIG_KINETIS_SPI2)
 struct spi_dev_s;
 void spi_flush(FAR struct spi_dev_s *dev);
 #endif
