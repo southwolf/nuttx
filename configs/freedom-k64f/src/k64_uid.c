@@ -1,8 +1,7 @@
 /****************************************************************************
- * configs/freedom-k64f/src/k64_userleds.c
+ * configs/freedom-k64/src/kinetis_uid.c
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *   Copyright (C) 2016 Neil Hancock. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,73 +38,40 @@
 
 #include <nuttx/config.h>
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <debug.h>
+#include <chip/kinetis_k64memorymap.h>
+#include <chip/kinetis_sim.h>
+#include <errno.h>
+#include "kinetis_uid.h"
 
 #include <nuttx/board.h>
-#include <arch/board/board.h>
 
-#include "chip.h"
-#include "kinetis.h"
-#include "freedom-k64f.h"
+#if defined(CONFIG_BOARDCTL_UNIQUEID)
 
-#ifndef CONFIG_ARCH_LEDS
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef OK
+#  define OK 0
+#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: board_userled_initialize
+ * Name: board_uniqueid
  ****************************************************************************/
 
-void board_userled_initialize(void)
+int board_uniqueid(FAR uint8_t *uniqueid)
 {
-  kinetis_pinconfig(GPIO_LED_R);
-  kinetis_pinconfig(GPIO_LED_G);
-  kinetis_pinconfig(GPIO_LED_B);
+  if (uniqueid == 0)
+    {
+      return -EINVAL;
+    }
+
+  kinetis_get_uniqueid(uniqueid);
+  return OK;
 }
 
-/****************************************************************************
- * Name: board_userled
- ****************************************************************************/
-
-void board_userled(int led, bool ledon)
-{
-  uint32_t ledcfg;
-
-  if (led == BOARD_LED_R)
-    {
-      ledcfg = GPIO_LED_R;
-    }
-  else if (led == BOARD_LED_G)
-    {
-      ledcfg = GPIO_LED_G;
-    }
-  else if (led == BOARD_LED_B)
-    {
-      ledcfg = GPIO_LED_B;
-    }
-  else
-    {
-      return;
-    }
-
-  kinetis_gpiowrite(ledcfg, !ledon); /* Low illuminates */
-}
-
-/****************************************************************************
- * Name: board_userled_all
- ****************************************************************************/
-
-void board_userled_all(uint8_t ledset)
-{
-  /* Low illuminates */
-
-  kinetis_gpiowrite(GPIO_LED_R, (ledset & BOARD_LED_R_BIT) == 0);
-  kinetis_gpiowrite(GPIO_LED_G, (ledset & BOARD_LED_G_BIT) == 0);
-  kinetis_gpiowrite(GPIO_LED_B, (ledset & BOARD_LED_B_BIT) == 0);
-}
-
-#endif /* CONFIG_ARCH_LEDS */
+#endif /* CONFIG_BOARDCTL_UNIQUEID */
