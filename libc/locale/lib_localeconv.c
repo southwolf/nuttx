@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/locale.h
+ * libc/locale/lib_localeconv.c
  *
  *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -33,80 +33,37 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_LOCALE_H
-#define __INCLUDE_LOCALE_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/compiler.h>
+#include <nuttx/config.h>
+
+#include <sys/types.h>
+#include <locale.h>
 
 #ifdef CONFIG_LIBC_LOCALE
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
-
-#define LC_ALL      0
-#define LC_COLLATE  1
-#define LC_CTYPE    2
-#define LC_MONETARY 3
-#define LC_NUMERIC  4
-#define LC_TIME     5
-#define LC_MESSAGES 6
 
 /****************************************************************************
- * Public Type Definitions
+ * Name: localeconv
+ *
+ * Description:
+ *   locales are not supported by NuttX
+ *
+ * Input Parameters:
+ *   category and locale - Select the appropriate piece of the program's
+ *     locale.
+ *
  ****************************************************************************/
 
-struct lconv
+FAR struct lconv *localeconv(void)
 {
-  FAR char *decimal_point;
-  FAR char *thousands_sep;
-  FAR char *grouping;
-  FAR char *int_curr_symbol;
-  FAR char *currency_symbol;
-  FAR char *mon_decimal_point;
-  FAR char *mon_thousands_sep;
-  FAR char *mon_grouping;
-  FAR char *positive_sign;
-  FAR char *negative_sign;
-  FAR char int_frac_digits;
-  FAR char frac_digits;
-  FAR char p_cs_precedes;
-  FAR char p_sep_by_space;
-  FAR char n_cs_precedes;
-  FAR char n_sep_by_space;
-  FAR char p_sign_posn;
-  FAR char n_sign_posn;
-  FAR char int_n_cs_precedes;
-  FAR char int_n_sep_by_space;
-  FAR char int_n_sign_posn;
-  FAR char int_p_cs_precedes;
-  FAR char int_p_sep_by_space;
-  FAR char int_p_sign_posn;
-};
+  /* NULL indicates the the locale was not changed */
 
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-#ifdef __cplusplus
-#define EXTERN extern "C"
-extern "C"
-{
-#else
-#define EXTERN extern
-#endif
-
-FAR char *setlocale(int category, FAR const char *locale);
-FAR struct lconv *localeconv(void);
-
-#undef EXTERN
-#ifdef __cplusplus
+  return NULL;
 }
 #endif
-
-#endif /* CONFIG_LIBC_LOCALE */
-#endif /* __INCLUDE_LOCALE_H */

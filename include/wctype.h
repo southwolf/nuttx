@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/locale.h
+ * include/wctype.h
  *
  *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -33,80 +33,83 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_LOCALE_H
-#define __INCLUDE_LOCALE_H
+#ifndef __INCLUDE_WTYPE_H
+#define __INCLUDE_WTYPE_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/compiler.h>
-
-#ifdef CONFIG_LIBC_LOCALE
+#include <sys/types.h>
+#include <stddef.h>
+#include <wchar.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define LC_ALL      0
-#define LC_COLLATE  1
-#define LC_CTYPE    2
-#define LC_MONETARY 3
-#define LC_NUMERIC  4
-#define LC_TIME     5
-#define LC_MESSAGES 6
+#ifndef WEOF
+#  define WEOF ((wint_t)-1)
+#endif
+
+/* valid values for wctype_t */
+
+#define WC_ALNUM        1
+#define WC_ALPHA        2
+#define WC_BLANK        3
+#define WC_CNTRL        4
+#define WC_DIGIT        5
+#define WC_GRAPH        6
+#define WC_LOWER        7
+#define WC_PRINT        8
+#define WC_PUNCT        9
+#define WC_SPACE        10
+#define WC_UPPER        11
+#define WC_XDIGIT       12
 
 /****************************************************************************
- * Public Type Definitions
+ * Public Types
  ****************************************************************************/
 
-struct lconv
-{
-  FAR char *decimal_point;
-  FAR char *thousands_sep;
-  FAR char *grouping;
-  FAR char *int_curr_symbol;
-  FAR char *currency_symbol;
-  FAR char *mon_decimal_point;
-  FAR char *mon_thousands_sep;
-  FAR char *mon_grouping;
-  FAR char *positive_sign;
-  FAR char *negative_sign;
-  FAR char int_frac_digits;
-  FAR char frac_digits;
-  FAR char p_cs_precedes;
-  FAR char p_sep_by_space;
-  FAR char n_cs_precedes;
-  FAR char n_sep_by_space;
-  FAR char p_sign_posn;
-  FAR char n_sign_posn;
-  FAR char int_n_cs_precedes;
-  FAR char int_n_sep_by_space;
-  FAR char int_n_sign_posn;
-  FAR char int_p_cs_precedes;
-  FAR char int_p_sep_by_space;
-  FAR char int_p_sign_posn;
-};
+#ifndef _WCTYPE_T
+#  define _WCTYPE_T
+typedef int wctype_t;
+#endif
+
+#ifndef _WCTRANS_T
+#  define _WCTRANS_T
+typedef int wctrans_t;
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
-#ifdef __cplusplus
-#define EXTERN extern "C"
-extern "C"
-{
-#else
-#define EXTERN extern
-#endif
+/* "The <wchar.h> header declares the following as functions and may also
+ *  define them as macros. Function prototypes must be provided for use with
+ *  an ISO C compiler."
+ *
+ * Reference: Opengroup.org
+ */
 
-FAR char *setlocale(int category, FAR const char *locale);
-FAR struct lconv *localeconv(void);
+int               iswalnum(wint_t);
+int               iswalpha(wint_t);
+int               iswblank(wint_t);
+int               iswcntrl(wint_t);
+int               iswctype(wint_t, wctype_t);
+int               iswdigit(wint_t);
+int               iswgraph(wint_t);
+int               iswlower(wint_t);
+int               iswprint(wint_t);
+int               iswpunct(wint_t);
+int               iswspace(wint_t);
+int               iswupper(wint_t);
+int               iswxdigit(wint_t);
+int               towctrans(wint_t, wctrans_t);
+wint_t            towlower(wint_t);
+wint_t            towupper(wint_t);
+wctrans_t         wctrans(FAR const char *);
+int               iswctype(wint_t, wctype_t);
+wctype_t          wctype(FAR const char *);
 
-#undef EXTERN
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* CONFIG_LIBC_LOCALE */
-#endif /* __INCLUDE_LOCALE_H */
+#endif /* INCLUDE_WTYPE_H */
