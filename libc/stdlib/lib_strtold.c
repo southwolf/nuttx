@@ -1,10 +1,6 @@
 /****************************************************************************
- * libc/stdlib/lib_strtof.c
- * Convert string to float
- *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
- *
- * A pretty straight forward conversion fo strtod():
+ * libc/stdlib/lib_strtod.c
+ * Convert string to long double
  *
  *   Copyright (C) 2002 Michael Ringgaard. All rights reserved.
  *   Copyright (C) 2006-2007 H. Peter Anvin.
@@ -48,6 +44,8 @@
 #include <ctype.h>
 #include <errno.h>
 
+#ifdef CONFIG_HAVE_LONG_DOUBLE
+
 /****************************************************************************
  * Pre-processor definitions
  ****************************************************************************/
@@ -57,23 +55,23 @@
  * added to nuttx/compiler for your compiler.
  */
 
-#if !defined(__FLT_MIN_EXP__) || !defined(__FLT_MAX_EXP__)
+#if !defined(__LDBL_MIN_EXP__) || !defined(__LDBL_MAX_EXP__)
 #  ifdef CONFIG_CPP_HAVE_WARNING
 #    warning "Size of exponent is unknown"
 #  endif
-#  undef  __FLT_MIN_EXP__
-#  define __FLT_MIN_EXP__ (-125)
-#  undef  __FLT_MAX_EXP__
-#  define __FLT_MAX_EXP__ (128)
+#  undef  __LDBL_MIN_EXP__
+#  define __LDBL_MIN_EXP__ (-1021)
+#  undef  __LDBL_MAX_EXP__
+#  define __LDBL_MAX_EXP__ (1024)
 #endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static inline int is_real(float x)
+static inline int is_real(long double x)
 {
-  const float infinite = 1.0F/0.0F;
+  const long double infinite = 1.0L/0.0L;
   return (x < infinite) && (x >= -infinite);
 }
 
@@ -82,24 +80,24 @@ static inline int is_real(float x)
  ****************************************************************************/
 
 /***************************************************(************************
- * Name: strtof
+ * Name: strtold
  *
  * Description:
- *   Convert a string to a float value
+ *   Convert a string to a long double value
  *
  ****************************************************************************/
 
-float strtof(FAR const char *str, FAR char **endptr)
+long double strtold(FAR const char *str, FAR char **endptr)
 {
-  float number;
+  long double number;
   int exponent;
   int negative;
   FAR char *p = (FAR char *) str;
-  float p10;
+  long double p10;
   int n;
   int num_digits;
   int num_decimals;
-  const float infinite = 1.0F/0.0F;
+  const long double infinite = 1.0L/0.0L;
 
   /* Skip leading whitespace */
 
@@ -121,7 +119,7 @@ float strtof(FAR const char *str, FAR char **endptr)
       break;
     }
 
-  number       = 0.0F;
+  number       = 0.0L;
   exponent     = 0;
   num_digits   = 0;
   num_decimals = 0;
@@ -130,7 +128,7 @@ float strtof(FAR const char *str, FAR char **endptr)
 
   while (isdigit(*p))
     {
-      number = number * 10.0F + (float)(*p - '0');
+      number = number * 10.0L + (long double)(*p - '0');
       p++;
       num_digits++;
     }
@@ -143,7 +141,7 @@ float strtof(FAR const char *str, FAR char **endptr)
 
       while (isdigit(*p))
         {
-          number = number * 10.0F + (float)(*p - '0');
+          number = number * 10.0L + (long double)(*p - '0');
           p++;
           num_digits++;
           num_decimals++;
@@ -155,7 +153,7 @@ float strtof(FAR const char *str, FAR char **endptr)
   if (num_digits == 0)
     {
       set_errno(ERANGE);
-      number = 0.0F;
+      number = 0.0L;
       goto errout;
     }
 
@@ -202,8 +200,8 @@ float strtof(FAR const char *str, FAR char **endptr)
         }
     }
 
-  if (exponent < __FLT_MIN_EXP__ ||
-      exponent > __FLT_MAX_EXP__)
+  if (exponent < __LDBL_MIN_EXP__ ||
+      exponent > __LDBL_MAX_EXP__)
     {
       set_errno(ERANGE);
       number = infinite;
@@ -212,7 +210,7 @@ float strtof(FAR const char *str, FAR char **endptr)
 
   /* Scale the result */
 
-  p10 = 10.0F;
+  p10 = 10.0L;
   n = exponent;
   if (n < 0)
     {
@@ -250,3 +248,5 @@ errout:
 
   return number;
 }
+
+#endif /* CONFIG_HAVE_LONG_DOUBLE */
