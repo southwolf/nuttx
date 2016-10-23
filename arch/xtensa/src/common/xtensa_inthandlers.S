@@ -126,20 +126,6 @@
 	and		a2, a2, a4
 	beqz	a2, 5f						/* Nothing to do */
 
-	/* This bit of code provides a nice debug backtrace in the debugger.
-	 * It does take a few more instructions, so undef XT_DEBUG_BACKTRACE
-	 * if you want to save the cycles.
-	* /
-
-#if XT_DEBUG_BACKTRACE
-#ifndef CONFIG_XTENSA_CALL0_ABI
-	rsr		a0, EPC_1 + \level - 1		/* Return address */
-	movi	a4, 0xC0000000				/* Constant with top 2 bits set (call size) */
-	or		a0, a0, a4					/* Set top 2 bits */
-	addx2	a0, a4, a0					/* Clear top bit -- simulating call4 size	*/
-#endif
-#endif
-
 #ifdef XT_INTEXC_HOOKS
 	/* Call interrupt hook if present to (pre)handle interrupts. */
 
@@ -606,18 +592,15 @@ _xtensa_level6_handler:
  * a way to save and restore registers it uses without touching the
  * interrupted stack.
  *
+ * A template and example can be found in the Cadence Design Systems tools
+ * documentation: "Microprocessor Programmer's Guide".
+ *
  * Each vector goes at a predetermined location according to the Xtensa
  * hardware configuration, which is ensured by its placement in a special
  * section known to the Xtensa linker support package (LSP). It performs
  * the minimum necessary before jumping to the handler in the .text section.
  *
  ****************************************************************************/
-
-/*
-Currently only shells for high priority interrupt handlers are provided
-here. However a template and example can be found in the Cadence Design Systems tools
-documentation: "Microprocessor Programmer's Guide".
-*/
 
 #if XCHAL_INT_NLEVELS >=2 && XCHAL_EXCM_LEVEL < 2 && XCHAL_DEBUGLEVEL !=2
 	.section	.iram1,"ax"
@@ -630,7 +613,7 @@ _xtensa_level2_handler:
 	/* Call interrupt hook if present to (pre)handle interrupts. */
 
 	movi	a0, _xt_intexc_hooks
-	l32i	a0, a0, 2<<2
+	l32i	a0, a0, 2 << 2
 	beqz	a0, 1f
 
 .Ln_xtensa_level2_handler_call_hook:
@@ -662,7 +645,7 @@ _xtensa_level3_handler:
 	/* Call interrupt hook if present to (pre)handle interrupts. */
 
 	movi	a0, _xt_intexc_hooks
-	l32i	a0, a0, 3<<2
+	l32i	a0, a0, 3 << 2
 	beqz	a0, 1f
 
 .Ln_xtensa_level3_handler_call_hook:
