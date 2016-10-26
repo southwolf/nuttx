@@ -128,9 +128,9 @@ void xtensa_irq_initialize(void)
 
   /* Detach all peripheral sources PRO CPU interrupts */
 
-  for (i = 0; i < NR_PERIPHERALS)
+  for (i = 0; i < ESP32_NPERIPHERALS; i++)
     {
-      esp32_detach_peripheral(0, i);;
+      esp32_detach_peripheral(0, i);
     }
 
 #if defined(CONFIG_STACK_COLORATION) && CONFIG_ARCH_INTERRUPTSTACK > 3
@@ -143,6 +143,13 @@ void xtensa_irq_initialize(void)
 #warning Missing logic
 
   esp32_irq_dump("initial", NR_IRQS);
+
+#ifdef CONFIG_ESP32_GPIO_IRQ
+  /* Initialize GPIO interrupt support */
+
+  esp32_gpioirqinitialize();
+#endif
+
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* And finally, enable interrupts */
