@@ -1168,7 +1168,7 @@ static bool esp32_txempty(struct uart_dev_s *dev)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_earlyserialinit
+ * Name: xtensa_early_serial_initialize
  *
  * Description:
  *   Performs the low level UART initialization early in debug so that the
@@ -1204,7 +1204,7 @@ void xtensa_early_serial_initialize(void)
 #endif
 
 /****************************************************************************
- * Name: up_serialinit
+ * Name: xtensa_serial_initialize
  *
  * Description:
  *   Register serial console and serial ports.  This assumes
@@ -1231,4 +1231,37 @@ void xtensa_serial_initialize(void)
 #endif
 }
 
+/****************************************************************************
+ * Name: up_putc
+ *
+ * Description:
+ *   Provide priority, low-level access to support OS debug writes
+ *
+ ****************************************************************************/
+
+int up_putc(int ch)
+{
+#ifdef HAVE_SERIAL_CONSOLE
+  uint32_t intena;
+
+  esp32_disableallints(CONSOLE_DEV.priv, &intena);
+
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      while(!esp32_txready(&CONSOLE_DEV));
+      esp32_send(&CONSOLE_DEV, 'r');
+    }
+
+  while(!esp32_txready(&CONSOLE_DEV));
+  esp32_send(&CONSOLE_DEV, ch);
+
+  esp32_restoreuartint(CONSOLE_DEV.priv, intena);
+#endif
+
+  return ch;
+}
 #endif /* USE_SERIALDRIVER */
