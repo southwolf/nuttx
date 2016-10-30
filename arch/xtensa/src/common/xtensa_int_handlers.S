@@ -63,7 +63,7 @@
 #include <arch/chip/core-isa.h>
 #include <arch/xtensa/xtensa_specregs.h>
 
-#include "xtensa_macros.h"
+#include "xtensa_abi.h"
 #include "chip_macros.h"
 #include "xtensa_timer.h"
 
@@ -134,7 +134,7 @@
 	l32i	a4, a4, \level << 2
 	beqz	a4, 2f
 
-#ifdef CONFIG_XTENSA_CALL0_ABI
+#ifdef __XTENSA_CALL0_ABI__
 	callx0	a4
 	beqz	a2, 5f
 #else
@@ -221,7 +221,7 @@
 	.macro	ps_setup	level tmp
 
 #if 0 /* Nested interrupts no yet supported */
-#  ifdef CONFIG_XTENSA_CALL0_ABI
+#  ifdef __XTENSA_CALL0_ABI__
 	/* Disable interrupts at level and below */
 
 	movi	\tmp, PS_INTLEVEL(\level) | PS_UM
@@ -229,7 +229,7 @@
 	movi	\tmp, PS_INTLEVEL(\level) | PS_UM | PS_WOE
 #  endif
 #else
-#  ifdef CONFIG_XTENSA_CALL0_ABI
+#  ifdef __XTENSA_CALL0_ABI__
 	/* Disable all low- and medium-priority interrupts.  Nested are not yet
 	 * supported.
 	 */
