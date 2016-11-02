@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_attrsetstacksize.c
+ * libc/pthread/pthread_condattr_destroy.c
  *
- *   Copyright (C) 2007, 2009, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,6 @@
 #include <nuttx/config.h>
 
 #include <pthread.h>
-#include <string.h>
 #include <debug.h>
 #include <errno.h>
 
@@ -49,38 +48,35 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  pthread_attr_setstacksize
+ * Function:  pthread_condattr_destroy
  *
  * Description:
+ *   Operations on condition variable attributes
  *
  * Parameters:
- *   attr
- *   stacksize
+ *   None
  *
  * Return Value:
- *   0 if successful.  Otherwise, an error code.
+ *   None
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-int pthread_attr_setstacksize(FAR pthread_attr_t *attr, long stacksize)
+int pthread_condattr_destroy(FAR pthread_condattr_t *attr)
 {
-  int ret;
+  int ret = OK;
 
-  linfo("attr=0x%p stacksize=%ld\n", attr, stacksize);
+  linfo("attr=0x%p\n", attr);
 
-  if (!attr || stacksize < PTHREAD_STACK_MIN)
+  if (!attr)
     {
       ret = EINVAL;
-    }
-  else
-    {
-      attr->stacksize = stacksize;
-      ret = OK;
     }
 
   linfo("Returning %d\n", ret);
   return ret;
 }
+
+
 

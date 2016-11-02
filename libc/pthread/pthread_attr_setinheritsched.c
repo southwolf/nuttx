@@ -1,5 +1,5 @@
-/********************************************************************************
- * libc/pthread/pthread_barrierattrgetpshared.c
+/****************************************************************************
+ * libc/pthread/pthread_attr_setinheritsched.c
  *
  *   Copyright (C) 2007, 2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -31,51 +31,63 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ********************************************************************************/
+ ****************************************************************************/
 
-/********************************************************************************
+/****************************************************************************
  * Included Files
- ********************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 
+#include <stdint.h>
 #include <pthread.h>
-#include <errno.h>
+#include <string.h>
 #include <debug.h>
+#include <errno.h>
 
-/********************************************************************************
+/****************************************************************************
  * Public Functions
- ********************************************************************************/
+ ****************************************************************************/
 
-/********************************************************************************
- * Function: pthread_barrierattr_getpshared
+/****************************************************************************
+ * Function:  pthread_attr_setinheritsched
  *
  * Description:
- *   The pthread_barrierattr_getpshared() function will obtain the value of the
- *   process-shared attribute from the attributes object referenced by attr.
+ *   Indicate whether the scheduling info in the pthread
+ *   attributes will be used or if the thread will
+ *   inherit the properties of the parent.
  *
  * Parameters:
- *   attr - barrier attributes to be queried.
- *   pshared - the location to stored the current value of the pshared attribute.
+ *   attr
+ *   policy
  *
  * Return Value:
- *   0 (OK) on success or EINVAL if either attr or pshared is invalid.
+ *   0 if successful.  Otherwise, an error code.
  *
  * Assumptions:
  *
- ********************************************************************************/
+ ****************************************************************************/
 
-int pthread_barrierattr_getpshared(FAR const pthread_barrierattr_t *attr, FAR int *pshared)
+int pthread_attr_setinheritsched(FAR pthread_attr_t *attr,
+                                 int inheritsched)
 {
-  int ret = OK;
+  int ret;
 
-  if (!attr || !pshared)
+  linfo("inheritsched=%d\n", inheritsched);
+
+  if (!attr ||
+      (inheritsched != PTHREAD_INHERIT_SCHED &&
+       inheritsched != PTHREAD_EXPLICIT_SCHED))
     {
       ret = EINVAL;
     }
   else
     {
-      *pshared = attr->pshared;
+      attr->inheritsched = (uint8_t)inheritsched;
+      ret = OK;
     }
+
+  linfo("Returning %d\n", ret);
   return ret;
 }
+

@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_attrsetschedparam.c
+ * libc/pthread/pthread_mutexattr_destroy.c
  *
- *   Copyright (C) 2007-2009, 2011, 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,23 +40,21 @@
 #include <nuttx/config.h>
 
 #include <pthread.h>
-#include <string.h>
-#include <sched.h>
-#include <debug.h>
 #include <errno.h>
+#include <debug.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  pthread_attr_setschedparam
+ * Function:  pthread_mutexattr_destroy
  *
  * Description:
+ *    Destroy mutex attributes.
  *
  * Parameters:
- *   attr
- *   param
+ *    attr
  *
  * Return Value:
  *   0 if successful.  Otherwise, an error code.
@@ -65,29 +63,19 @@
  *
  ****************************************************************************/
 
-int pthread_attr_setschedparam(FAR pthread_attr_t *attr,
-                               FAR const struct sched_param *param)
+int pthread_mutexattr_destroy(FAR pthread_mutexattr_t *attr)
 {
-  int ret;
+  int ret = OK;
 
-  linfo("attr=0x%p param=0x%p\n", attr, param);
+  linfo("attr=0x%p\n", attr);
 
-  if (!attr || !param)
+  if (!attr)
     {
       ret = EINVAL;
     }
   else
     {
-      attr->priority            = (short)param->sched_priority;
-#ifdef CONFIG_SCHED_SPORADIC
-      attr->low_priority        = (uint8_t)param->sched_ss_low_priority;
-      attr->max_repl            = (uint8_t)param->sched_ss_max_repl;
-      attr->repl_period.tv_sec  = param->sched_ss_repl_period.tv_sec;
-      attr->repl_period.tv_nsec = param->sched_ss_repl_period.tv_nsec;
-      attr->budget.tv_sec       = param->sched_ss_init_budget.tv_sec;
-      attr->budget.tv_nsec      = param->sched_ss_init_budget.tv_nsec;
-#endif
-      ret = OK;
+      attr->pshared = 0;
     }
 
   linfo("Returning %d\n", ret);

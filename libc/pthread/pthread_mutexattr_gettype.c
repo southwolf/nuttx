@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_condattrdestroy.c
+ * libc/pthread/pthread_mutexattr_gettype.c
  *
- *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2008, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,45 +38,42 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
 #include <pthread.h>
-#include <debug.h>
 #include <errno.h>
+
+#ifdef CONFIG_MUTEX_TYPES
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  pthread_condattr_destroy
+ * Function: pthread_mutexattr_gettype
  *
  * Description:
- *   Operations on condition variable attributes
+ *   Return the mutex type from the mutex attributes.
  *
  * Parameters:
- *   None
+ *   attr - The mutex attributes to query
+ *   type - Location to return the mutex type
  *
  * Return Value:
- *   None
+ *   0, if the mutex type was successfully return in 'type', or
+ *   EINVAL, if any NULL pointers provided.
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-int pthread_condattr_destroy(FAR pthread_condattr_t *attr)
+int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type)
 {
-  int ret = OK;
-
-  linfo("attr=0x%p\n", attr);
-
-  if (!attr)
+  if (attr && type)
     {
-      ret = EINVAL;
+      *type = attr->type;
+      return 0;
     }
 
-  linfo("Returning %d\n", ret);
-  return ret;
+  return EINVAL;
 }
 
-
-
+#endif /* CONFIG_MUTEX_TYPES */

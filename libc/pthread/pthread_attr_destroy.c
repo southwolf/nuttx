@@ -1,7 +1,7 @@
-/********************************************************************************
- * libc/pthread/pthread_barrierattrdestroy.c
+/****************************************************************************
+ * libc/pthread/pthread_attr_destroy.c
  *
- *   Copyright (C) 2007, 2009, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,44 +31,44 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ********************************************************************************/
+ ****************************************************************************/
 
-/********************************************************************************
+/****************************************************************************
  * Included Files
- ********************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 
 #include <pthread.h>
-#include <errno.h>
+#include <string.h>
 #include <debug.h>
+#include <errno.h>
 
-/********************************************************************************
+/****************************************************************************
  * Public Functions
- ********************************************************************************/
+ ****************************************************************************/
 
-/********************************************************************************
- * Function: pthread_barrierattr_destroy
+/****************************************************************************
+ * Function:  pthread_attr_destroy
  *
  * Description:
- *   The pthread_barrierattr_destroy() function will destroy a barrier attributes
- *   object.  A destroyed attr attributes object can be reinitialized using
- *   pthread_barrierattr_init(); the results of otherwise referencing the object
- *   after it has been destroyed are undefined.
+ *    An attributes object can be deleted when it is no longer needed.
  *
  * Parameters:
- *   attr - barrier attributes to be destroyed.
+ *   attr
  *
  * Return Value:
- *   0 (OK) on success or EINVAL if attr is invalid.
+ *   0 meaning success
  *
  * Assumptions:
  *
- ********************************************************************************/
+ ****************************************************************************/
 
-int pthread_barrierattr_destroy(FAR pthread_barrierattr_t *attr)
+int pthread_attr_destroy(FAR pthread_attr_t *attr)
 {
-  int ret = OK;
+  int ret;
+
+  linfo("attr=0x%p\n", attr);
 
   if (!attr)
     {
@@ -76,7 +76,12 @@ int pthread_barrierattr_destroy(FAR pthread_barrierattr_t *attr)
     }
   else
     {
-      attr->pshared = PTHREAD_PROCESS_PRIVATE;
+      memset(attr, 0, sizeof(pthread_attr_t));
+      ret = OK;
     }
+
+  linfo("Returning %d\n", ret);
   return ret;
 }
+
+

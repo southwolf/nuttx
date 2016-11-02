@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_attrsetaffinity.c
+ * libc/pthread/pthread_attr_init.c
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,39 +40,69 @@
 #include <nuttx/config.h>
 
 #include <pthread.h>
+#include <string.h>
 #include <debug.h>
-#include <assert.h>
 #include <errno.h>
+
+#include <nuttx/pthread.h>
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* Default pthread attributes (see include/nuttx/pthread.h).  When configured
+ * to build separate kernel- and user-address spaces, this global is
+ * duplicated in each address spaced.  This copy can only be shared within
+ * the user address space.
+ */
+
+#if (defined(CONFIG_BUILD_PROTECTED) || defined(CONFIG_BUILD_KERNEL)) && \
+    !defined(__KERNEL__)
+const pthread_attr_t g_default_pthread_attr = PTHREAD_ATTR_INITIALIZER;
+#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  pthread_attr_setaffinity
+ * Function:  pthread_attr_init
  *
  * Description:
+ *   Initializes a thread attributes object (attr) with
+ *   default values for all of the individual attributes
+ *   used by a given implementation.
  *
  * Parameters:
  *   attr
- *   stacksize
  *
  * Return Value:
- *   0 if successful.  Otherwise, an error code.
+ *   0 on success, otherwise an error number
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-int pthread_attr_setaffinity_np(FAR pthread_attr_t *attr,
-                                size_t cpusetsize,
-                                FAR const cpu_set_t *cpuset)
+int pthread_attr_init(FAR pthread_attr_t *attr)
 {
-  linfo("attr=0x%p cpusetsize=%d cpuset=0x%p\n", attr, (int)cpusetsize, cpuset);
+  int ret = OK;
 
-  DEBUGASSERT(attr != NULL && cpusetsize == sizeof(cpu_set_t) &&
-              cpuset != NULL && *cpuset != 0);
+  linfo("attr=0x%p\n", attr);
+  if (!attr)
+    {
+      ret = ENOMEM;
+    }
+  else
+    {
+      /* Set the child thread priority to be the default
+       * priority. Set the child stack size to some arbitrary
+       * default value.
+       */
 
-  attr->affinity = *cpuset;
-  return OK;
+      memcpy(attr, &g_default_pthread_attr, sizeof(pthread_attr_t));
+    }
+
+  linfo("Returning %d\n", ret);
+  return ret;
 }
+

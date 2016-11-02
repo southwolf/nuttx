@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_mutexattrgettype.c
+ * sched/semaphore/sem_setprotocol.c
  *
- *   Copyright (C) 2008, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,41 +38,73 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <pthread.h>
+
+#include <semaphore.h>
+#include <assert.h>
 #include <errno.h>
 
-#ifdef CONFIG_MUTEX_TYPES
+#include "semaphore/semaphore.h"
+
+#ifdef CONFIG_PRIORITY_INHERITANCE
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Function: pthread_mutexattr_gettype
+ * Function: sem_setprotocol
  *
  * Description:
- *   Return the mutex type from the mutex attributes.
+ *    Set semaphore protocol attribute.
  *
  * Parameters:
- *   attr - The mutex attributes to query
- *   type - Location to return the mutex type
+ *    sem      - A pointer to the semaphore whose attributes are to be
+ *               modified
+ *    protocol - The new protocol to use
  *
  * Return Value:
- *   0, if the mutex type was successfully return in 'type', or
- *   EINVAL, if any NULL pointers provided.
- *
- * Assumptions:
+ *   0 if successful.  Otherwise, -1 is returned and the errno value is set
+ *   appropriately.
  *
  ****************************************************************************/
 
-int pthread_mutexattr_gettype(const pthread_mutexattr_t *attr, int *type)
+int sem_setprotocol(FAR sem_t *sem, int protocol)
 {
-  if (attr && type)
+  int errcode;
+
+  DEBUGASSERT(sem != NULL);
+
+  switch (protocol)
     {
-      *type = attr->type;
-      return 0;
+      case SEM_PRIO_NONE:
+        /* Disable priority inheritance */
+
+        sem->flags |= PRIOINHERIT_FLAGS_DISABLE;
+
+        /* Remove any current holders */
+
+        sem_destroyholder(sem);
+        return OK;
+
+      case SEM_PRIO_INHERIT:
+        /* Enable priority inheritance (dangerous) */
+
+        sem->flags &= ~PRIOINHERIT_FLAGS_DISABLE;
+        return OK;
+
+      case SEM_PRIO_PROTECT:
+        /* Not yet supported */
+
+        errcode = ENOSYS;
+        break;
+
+      default:
+        errcode = EINVAL;
+        break;
     }
-  return EINVAL;
+
+  set_errno(errcode);
+  return ERROR;
 }
 
-#endif /* CONFIG_MUTEX_TYPES */
+#endif /* CONFIG_PRIORITY_INHERITANCE */

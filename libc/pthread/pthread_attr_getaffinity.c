@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_attrdestroy.c
+ * libc/pthread/pthread_attr_getaffinity.c
  *
- *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,11 +37,10 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
+#include <sys/types.h>
 #include <pthread.h>
-#include <string.h>
 #include <debug.h>
+#include <assert.h>
 #include <errno.h>
 
 /****************************************************************************
@@ -49,40 +48,28 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  pthread_attr_destroy
+ * Function:  pthread_attr_getaffinity
  *
  * Description:
- *    An attributes object can be deleted when it is no longer
- *     needed.
  *
  * Parameters:
  *   attr
+ *   cpuset
  *
  * Return Value:
- *   0 meaning success
+ *   0 if successful.  Otherwise, an error code.
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-int pthread_attr_destroy(FAR pthread_attr_t *attr)
+int pthread_attr_getaffinity_np(FAR const pthread_attr_t *attr,
+                                size_t cpusetsize, cpu_set_t *cpuset)
 {
-  int ret;
+  linfo("attr=0x%p cpusetsize=%d cpuset=0x%p\n", attr, (int)cpusetsize, cpuset);
 
-  linfo("attr=0x%p\n", attr);
+  DEBUGASSERT(attr != NULL && cpusetsize == sizeof(cpu_set_t) && cpuset != NULL);
 
-  if (!attr)
-    {
-      ret = EINVAL;
-    }
-  else
-    {
-      memset(attr, 0, sizeof(pthread_attr_t));
-      ret = OK;
-    }
-
-  linfo("Returning %d\n", ret);
-  return ret;
+  *cpuset = attr->affinity;
+  return OK;
 }
-
-

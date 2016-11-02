@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_mutexattrgetpshared.c
+ * libc/pthread/pthread_mutexattr_settype.c
  *
- *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2008, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,47 +38,41 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
 #include <pthread.h>
 #include <errno.h>
-#include <debug.h>
+
+#ifdef CONFIG_MUTEX_TYPES
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  pthread_mutexattr_getpshared
+ * Function: pthread_mutexattr_settype
  *
  * Description:
- *    Get pshared mutex attribute.
+ *   Set the mutex type in the mutex attributes.
  *
  * Parameters:
- *    attr
- *    pshared
+ *   attr - The mutex attributes in which to set the mutex type.
+ *   type - The mutex type value to set.
  *
  * Return Value:
- *   0 if successful.  Otherwise, an error code.
+ *   0, if the mutex type was successfully set in 'attr', or
+ *   EINVAL, if 'attr' is NULL or 'type' unrecognized.
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-int pthread_mutexattr_getpshared(FAR const pthread_mutexattr_t *attr, FAR int *pshared)
+int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type)
 {
-  int ret = OK;
-
-  linfo("attr=0x%p pshared=0x%p\n", attr, pshared);
-
-  if (!attr || !pshared)
+  if (attr && type >= PTHREAD_MUTEX_NORMAL && type <= PTHREAD_MUTEX_RECURSIVE)
     {
-      ret = EINVAL;
+      attr->type = type;
+      return OK;
     }
-  else
-    {
-      *pshared = attr->pshared;
-    }
-
-  linfo("Returning %d\n", ret);
-  return ret;
+  return EINVAL;
 }
+
+#endif /* CONFIG_MUTEX_TYPES */

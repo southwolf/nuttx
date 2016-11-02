@@ -1,7 +1,7 @@
-/****************************************************************************
- * libc/pthread/pthread_attrgetschedparam.c
+/********************************************************************************
+ * libc/pthread/pthread_barrierattr_init.c
  *
- *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007, 2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,65 +31,51 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ********************************************************************************/
 
-/****************************************************************************
+/********************************************************************************
  * Included Files
- ****************************************************************************/
+ ********************************************************************************/
 
 #include <nuttx/config.h>
 
 #include <pthread.h>
-#include <string.h>
-#include <sched.h>
-#include <debug.h>
 #include <errno.h>
+#include <debug.h>
 
-/****************************************************************************
+/********************************************************************************
  * Public Functions
- ****************************************************************************/
+ ********************************************************************************/
 
-/****************************************************************************
- * Function:  pthread_attr_getschedparam
+/********************************************************************************
+ * Function: pthread_barrierattr_init
  *
  * Description:
+ *   The pthread_barrierattr_init() function will initialize a barrier attribute
+ *   object attr with the default value for all of the attributes defined by the
+ *   implementation.
  *
  * Parameters:
- *   attr
- *   param
+ *   attr - barrier attributes to be initialized.
  *
  * Return Value:
- *   0 if successful.  Otherwise, an error code.
+ *   0 (OK) on success or EINVAL if attr is invalid.
  *
  * Assumptions:
  *
- ****************************************************************************/
+ ********************************************************************************/
 
-int pthread_attr_getschedparam(FAR const pthread_attr_t *attr,
-                               FAR struct sched_param *param)
+int pthread_barrierattr_init(FAR pthread_barrierattr_t *attr)
 {
-  int ret;
+  int ret = OK;
 
-  linfo("attr=0x%p param=0x%p\n", attr, param);
-
-  if (!attr || !param)
+  if (!attr)
     {
       ret = EINVAL;
     }
   else
     {
-      param->sched_priority               = (int)attr->priority;
-#ifdef CONFIG_SCHED_SPORADIC
-      param->sched_ss_low_priority        = (int)attr->low_priority;
-      param->sched_ss_max_repl            = (int)attr->max_repl;
-      param->sched_ss_repl_period.tv_sec  = attr->repl_period.tv_sec;
-      param->sched_ss_repl_period.tv_nsec = attr->repl_period.tv_nsec;
-      param->sched_ss_init_budget.tv_sec  = attr->budget.tv_sec;
-      param->sched_ss_init_budget.tv_nsec = attr->budget.tv_nsec;
-#endif
-      ret = OK;
+      attr->pshared = PTHREAD_PROCESS_PRIVATE;
     }
-
-  linfo("Returning %d\n", ret);
   return ret;
 }

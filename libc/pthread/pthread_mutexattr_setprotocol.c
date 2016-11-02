@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_attrgetschedpolicy.c
+ * libc/pthread/pthread_mutexattr_setprotocol.c
  *
- *   Copyright (C) 2007, 2008, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,49 +37,43 @@
  * Included Files
  ****************************************************************************/
 
-#include <sys/types.h>
+#include <nuttx/config.h>
+
 #include <pthread.h>
-#include <string.h>
-#include <debug.h>
+#include <assert.h>
 #include <errno.h>
+#include <debug.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  pthread_attr_getschedpolicy
+ * Function: pthread_mutexattr_setprotocol
  *
  * Description:
- *   Obtain the scheduling algorithm attribute.
+ *    Set mutex protocol attribute.
  *
  * Parameters:
- *   attr
- *   policy
+ *    attr     - A pointer to the mutex attributes to be modified
+ *    protocol - The new protocol to use
  *
  * Return Value:
  *   0 if successful.  Otherwise, an error code.
  *
- * Assumptions:
- *
  ****************************************************************************/
 
-int pthread_attr_getschedpolicy(FAR const pthread_attr_t *attr, int *policy)
+int pthread_mutexattr_setprotocol(FAR pthread_mutexattr_t *attr,
+                                  int protocol)
 {
-  int ret;
+  linfo("attr=0x%p protocol=%d\n", attr, protocol);
+  DEBUGASSERT(attr != NULL);
 
-  linfo("attr=0x%p policy=0x%p\n", attr, policy);
-
-  if (!attr || !policy)
+  if (protocol >= PTHREAD_PRIO_NONE && protocol <= PTHREAD_PRIO_PROTECT)
     {
-      ret = EINVAL;
-    }
-  else
-    {
-      *policy = attr->policy;
-      ret = OK;
+      attr->proto = protocol;
+      return OK;
     }
 
-  linfo("Returning %d\n", ret);
-  return ret;
+  return EINVAL;
 }

@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_attrsetschedpolicy.c
+ * libc/pthread/pthread_mutexattr_setpshared.c
  *
- *   Copyright (C) 2007-2009, 2011, 2015 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,24 +40,22 @@
 #include <nuttx/config.h>
 
 #include <pthread.h>
-#include <string.h>
-#include <sched.h>
-#include <debug.h>
 #include <errno.h>
+#include <debug.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  pthread_attr_setschedpolicy
+ * Function:  pthread_mutexattr_setpshared
  *
  * Description:
- *   Set the scheduling algorithm attribute.
+ *    Set pshared  mutex attribute.
  *
  * Parameters:
- *   attr
- *   policy
+ *    attr
+ *    pshared
  *
  * Return Value:
  *   0 if successful.  Otherwise, an error code.
@@ -66,28 +64,19 @@
  *
  ****************************************************************************/
 
-int pthread_attr_setschedpolicy(FAR pthread_attr_t *attr, int policy)
+int pthread_mutexattr_setpshared(FAR pthread_mutexattr_t *attr, int pshared)
 {
-  int ret;
+  int ret = OK;
 
-  linfo("attr=0x%p policy=%d\n", attr, policy);
+  linfo("attr=0x%p pshared=%d\n", attr, pshared);
 
-  if (!attr ||
-      (policy != SCHED_FIFO
-#if CONFIG_RR_INTERVAL > 0
-       && policy != SCHED_RR
-#endif
-#ifdef CONFIG_SCHED_SPORADIC
-       && policy != SCHED_SPORADIC
-#endif
-    ))
+  if (!attr || (pshared != 0 && pshared != 1))
     {
       ret = EINVAL;
     }
   else
     {
-      attr->policy = policy;
-      ret = OK;
+      attr->pshared = pshared;
     }
 
   linfo("Returning %d\n", ret);

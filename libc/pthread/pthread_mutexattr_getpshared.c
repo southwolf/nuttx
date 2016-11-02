@@ -1,5 +1,5 @@
 /****************************************************************************
- * libc/pthread/pthread_mutexattrsetpshared.c
+ * libc/pthread/pthread_mutexattr_getpshared.c
  *
  *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -48,10 +48,10 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Function:  pthread_mutexattr_setpshared
+ * Function:  pthread_mutexattr_getpshared
  *
  * Description:
- *    Set pshared  mutex attribute.
+ *    Get pshared mutex attribute.
  *
  * Parameters:
  *    attr
@@ -64,19 +64,19 @@
  *
  ****************************************************************************/
 
-int pthread_mutexattr_setpshared(FAR pthread_mutexattr_t *attr, int pshared)
+int pthread_mutexattr_getpshared(FAR const pthread_mutexattr_t *attr, FAR int *pshared)
 {
   int ret = OK;
 
-  linfo("attr=0x%p pshared=%d\n", attr, pshared);
+  linfo("attr=0x%p pshared=0x%p\n", attr, pshared);
 
-  if (!attr || (pshared != 0 && pshared != 1))
+  if (!attr || !pshared)
     {
       ret = EINVAL;
     }
   else
     {
-      attr->pshared = pshared;
+      *pshared = attr->pshared;
     }
 
   linfo("Returning %d\n", ret);

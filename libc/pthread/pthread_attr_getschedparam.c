@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_mutexattrsettype.c
+ * libc/pthread/pthread_attr_getschedparam.c
  *
- *   Copyright (C) 2008, 2011 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007-2009, 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,41 +38,58 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <pthread.h>
-#include <errno.h>
 
-#ifdef CONFIG_MUTEX_TYPES
+#include <pthread.h>
+#include <string.h>
+#include <sched.h>
+#include <debug.h>
+#include <errno.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Function: pthread_mutexattr_settype
+ * Function:  pthread_attr_getschedparam
  *
  * Description:
- *   Set the mutex type in the mutex attributes.
  *
  * Parameters:
- *   attr - The mutex attributes in which to set the mutex type.
- *   type - The mutex type value to set.
+ *   attr
+ *   param
  *
  * Return Value:
- *   0, if the mutex type was successfully set in 'attr', or
- *   EINVAL, if 'attr' is NULL or 'type' unrecognized.
+ *   0 if successful.  Otherwise, an error code.
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int type)
+int pthread_attr_getschedparam(FAR const pthread_attr_t *attr,
+                               FAR struct sched_param *param)
 {
-  if (attr && type >= PTHREAD_MUTEX_NORMAL && type <= PTHREAD_MUTEX_RECURSIVE)
-    {
-      attr->type = type;
-      return OK;
-    }
-  return EINVAL;
-}
+  int ret;
 
-#endif /* CONFIG_MUTEX_TYPES */
+  linfo("attr=0x%p param=0x%p\n", attr, param);
+
+  if (!attr || !param)
+    {
+      ret = EINVAL;
+    }
+  else
+    {
+      param->sched_priority               = (int)attr->priority;
+#ifdef CONFIG_SCHED_SPORADIC
+      param->sched_ss_low_priority        = (int)attr->low_priority;
+      param->sched_ss_max_repl            = (int)attr->max_repl;
+      param->sched_ss_repl_period.tv_sec  = attr->repl_period.tv_sec;
+      param->sched_ss_repl_period.tv_nsec = attr->repl_period.tv_nsec;
+      param->sched_ss_init_budget.tv_sec  = attr->budget.tv_sec;
+      param->sched_ss_init_budget.tv_nsec = attr->budget.tv_nsec;
+#endif
+      ret = OK;
+    }
+
+  linfo("Returning %d\n", ret);
+  return ret;
+}
