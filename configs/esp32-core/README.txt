@@ -83,9 +83,27 @@ ESP32 Toolchain
 Memory Map
 ==========
 
-  Embedded Memory
-  ---------------
+  Address Mapping
+  ----------- ---------- ---------- --------------- ---------------
   BUS TYPE    START      LAST       DESCRIPTION     NOTES
+  ----------- ---------- ---------- --------------- ---------------
+              0x00000000 0x3F3FFFFF                 Reserved
+  Data        0x3F400000 0x3F7FFFFF External Memory
+  Data        0x3F800000 0x3FBFFFFF External Memory
+              0x3FC00000 0x3FEFFFFF                 Reserved
+  Data        0x3FF00000 0x3FF7FFFF Peripheral
+  Data        0x3FF80000 0x3FFFFFFF Embedded Memory
+  Instruction 0x40000000 0x400C1FFF Embedded Memory
+  Instruction 0x400C2000 0x40BFFFFF External Memory
+              0x40C00000 0x4FFFFFFF                 Reserved
+  Data /      0x50000000 0x50001FFF Embedded Memory
+  Instruction
+              0x50002000 0xFFFFFFFF                 Reserved
+
+  Embedded Memory
+  ----------- ---------- ---------- --------------- ---------------
+  BUS TYPE    START      LAST       DESCRIPTION     NOTES
+  ----------- ---------- ---------- --------------- ---------------
   Data        0x3ff80000 0x3ff81fff RTC FAST Memory PRO_CPU Only
               0x3ff82000 0x3ff8ffff                 Reserved
   Data        0x3ff90000 0x3ff9ffff Internal ROM 1
@@ -94,8 +112,9 @@ Memory Map
   Data        0x3ffe0000 0x3fffffff Internal SRAM 1 DMA
 
   Boundary Address
-  ----------------
+  ----------- ---------- ---------- --------------- ---------------
   BUS TYPE    START      LAST       DESCRIPTION     NOTES
+  ----------- ---------- ---------- --------------- ---------------
   Instruction 0x40000000 0x40007fff Internal ROM 0  Remap
   Instruction 0x40008000 0x4005ffff Internal ROM 0
               0x40060000 0x4006ffff                 Reserved
@@ -109,8 +128,9 @@ Memory Map
   Instruction
 
   External Memory
-  ---------------
+  ----------- ---------- ---------- --------------- ---------------
   BUS TYPE    START      LAST       DESCRIPTION     NOTES
+  ----------- ---------- ---------- --------------- ---------------
   Data        0x3f400000 0x3f7fffff External Flash  Read
   Data        0x3f800000 0x3fbfffff External SRAM   Read and Write
 
@@ -119,19 +139,20 @@ Memory Map
   Instruction 0x400c2000 0x40bfffff 11512 KB External Flash Read
 
   Linker Segments
-  ---------------
-  DESCRIPTION        START        END        ATTR LINKER SEGMENT NAME
-  FLASH mapped data: 0x3f400010 - 0x3fc00010  R   dram_0_seg
-  COMMON data RAM:   0x3ffb0000 - 0x40000000  RW  dram_0_seg (NOTE 1,2)
-  IRAM for PRO cpu:  0x40080000 - 0x400a0000  RX  iram0_0_seg
-  RTC fast memory:   0x400c0000 - 0x400c2000  RWX rtc_iram_seg
-  FLASH:             0x400d0018 - 0x40400018  RX  iram0_2_seg (actually FLASH)
-  RTC slow memory:   0x50000000 - 0x50001000  RW  rtc_slow_seg (NOTE 3)
+  ------------------ ---------- ---------- ---- ----------------------------
+  DESCRIPTION        START      END        ATTR LINKER SEGMENT NAME
+  ------------------ ---------- ---------- ---- ----------------------------
+  FLASH mapped data: 0x3f400010 0x3fc00010  R   dram_0_seg
+  COMMON data RAM:   0x3ffb0000 0x40000000  RW  dram_0_seg (NOTE 1,2)
+  IRAM for PRO cpu:  0x40080000 0x400a0000  RX  iram0_0_seg
+  RTC fast memory:   0x400c0000 0x400c2000  RWX rtc_iram_seg
+  FLASH:             0x400d0018 0x40400018  RX  iram0_2_seg (actually FLASH)
+  RTC slow memory:   0x50000000 0x50001000  RW  rtc_slow_seg (NOTE 3)
 
-  NOTE 1: Linker script will reserved space at the beginning of the segment
+  NOTE 1: Linker script will reserve space at the beginning of the segment
           for BT and at the end for trace memory.
   NOTE 2: Heap enads at the top of dram0_0_seg
-  NOTE 3: Linker script will reserved space at the beginning of the segment
+  NOTE 3: Linker script will reserve space at the beginning of the segment
           for co-processor reserve memory and at the end for ULP coprocessor
           reserve memory.
 
@@ -309,10 +330,12 @@ Things to Do
 ============
 
   1. There is no support for an interrupt stack yet.
+
   2. There is no clock intialization logic in place.  This depends on logic in
      Expressif libriaries.  The board comes up using that basic 40 Mhz crystal
      for clocking.  Getting to 80 MHz will require clocking initialization in
      esp32_clockconfig.c.
+
   3. I did not implement the lazy co-processor save logic supported by Xtensa.
      That logic works like this:
 
@@ -323,7 +346,9 @@ Things to Do
      c. The co-processor exception handler re-enables the co-processor.
 
      Instead, the NuttX logic saves and restores CPENABLE on each context
-     switch.
+     switch.  This has disadvantages in that (1) co-processor context will
+     be saved and restored even if the co-processor was never used, and (2)
+     tasks must explicitly enable and disable co-processors.
 
   4. Currently the Xtensa port copies register state save information from
      the stack into the TCB.  A more efficient alternative would be to just
