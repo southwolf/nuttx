@@ -1,4 +1,4 @@
-NuttX TODO List (Last updated November 17, 2016)
+NuttX TODO List (Last updated November 19, 2016)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This file summarizes known NuttX bugs, limitations, inconsistencies with
@@ -9,7 +9,7 @@ issues related to each board port.
 
 nuttx/:
 
- (14)  Task/Scheduler (sched/)
+ (15)  Task/Scheduler (sched/)
   (1)  Memory Management (mm/)
   (1)  Power Management (drivers/pm)
   (3)  Signals (sched/signal, arch/)
@@ -303,6 +303,58 @@ o Task/Scheduler (sched/)
   Status:      Open
   Priority:    Low.  Things are just the way that we want them for the way
                that NuttX is used today.
+
+  Title:       SMP ISSUES
+  Description: The interface task_restart() (and probably task_delete()) are
+               not usable in the SMP configuration in the current design.  In
+               the non-SMP case, these are relatively simple:  If the task is
+               are not restarting/deleting itself, then the task to-be-restarted/
+               deleted is is supended and the restart/delete operation is a
+               simple operation on data structures.
+
+               In the SMP configuration, on the other hand, the task to be
+               restarted/deleted my in fact be executing concurrently on
+               another CPU and the existing logic cannot support those
+               operations on the running another CPU.
+
+               There might be a simple way to handler this; perhaps using
+               up_cpu_pause(), you could pause all of the other CPUs, perform
+               the restart/delete operation, then restart all other CPUs.  But
+               this seems like a lot of work to support some garbage interfaces
+               that really should be removed anyway.  These are unsafe, non-
+               standard interfaces that really have no place in an RTOS (unsafe
+               because you don't know what resources were held by the task when
+               it was restarted or deleted).
+
+               NOTE: Currently task_restart() is not even built if CONFIG_SMP=y.
+               The task_restart() test is also disabled in apps/examples/ostest
+               in this configuration.  task_delete(), on the other hand, is
+               built (but probably should not be).
+  Status:      Open
+  Priority:    Low.  I do not plan to do anything with this in the near future.
+
+  Title:       SPINLOCKS AND DATA CACHES
+  Description: If spinlocks are used in a system with a data cache, then there
+               may be a problem with cache coherency in some CPU architectures:
+               When one CPU modifies the spinlock, the changes may not be
+               visible to another CPU if it does not share the data cache.
+               That would cause failure in the spinlock logic.
+
+               Flushing the D-cache on writes and invalidating before a read is
+               not really an option.  spinlocks are normally 8-bits in size and
+               cache lines are typically 32-bytes so that would have side effects
+               unless the spinlocks were made to be the same size as one cache
+               line.
+
+               The better option is to add compiler independent "ornmentation"
+               to the spinlock so that the spinlocks are all linked together
+               into a separate, non-cacheable memory regions.  Because of
+               region aligment and minimum region mapping sizes.  This would
+               work in systems that have both data cache and either an MPU or
+               an MMU.
+  Status:      Open
+  Priority:    High.  spinlocks, and hence SMP, will not work on such systems
+               without this change.
 
 o Memory Management (mm/)
   ^^^^^^^^^^^^^^^^^^^^^^^
