@@ -1,7 +1,7 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_sigdeliver.c
+ * arch/misoc/src/lm32/lm32_sigdeliver.c
  *
- *   Copyright (C) 2013, 2015-2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,7 @@
 
 #include <stdint.h>
 #include <sched.h>
+#include <syscall.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
@@ -49,8 +50,7 @@
 #include <arch/board/board.h>
 
 #include "sched/sched.h"
-#include "up_internal.h"
-#include "up_arch.h"
+#include "lm32.h"
 
 #ifndef CONFIG_DISABLE_SIGNALS
 
@@ -70,7 +70,7 @@
 
 void up_sigdeliver(void)
 {
-  struct tcb_s  *rtcb = this_task();
+  struct tcb_s *rtcb = this_task();
   uint32_t regs[XCPTCONTEXT_REGS];
   sig_deliver_t sigdeliver;
 
@@ -89,11 +89,11 @@ void up_sigdeliver(void)
 
   /* Save the real return state on the stack. */
 
-  up_copyfullstate(regs, rtcb->xcp.regs);
-  regs[REG_PC]         = rtcb->xcp.saved_pc;
-  regs[REG_CPSR]       = rtcb->xcp.saved_cpsr;
+  up_copystate(regs, rtcb->xcp.regs);
+  regs[REG_EPC]        = rtcb->xcp.saved_epc;
+  regs[REG_INT_CTX]    = rtcb->xcp.saved_int_ctx;
 
-  /* Get a local copy of the sigdeliver function pointer. we do this so that
+  /* Get a local copy of the sigdeliver function pointer. We do this so that
    * we can nullify the sigdeliver function pointer in the TCB and accept
    * more signal deliveries while processing the current pending signals.
    */
@@ -103,31 +103,34 @@ void up_sigdeliver(void)
 
   /* Then restore the task interrupt state */
 
-  leave_critical_section(regs[REG_CPSR]);
+  up_irq_restore((irqstate_t)regs[REG_INT_CTX]);
 
-  /* Deliver the signal */
+  /* Deliver the signals */
 
   sigdeliver(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
    * errno that is needed by the user logic (it is probably EINTR).
-   *
-   * REVISIT: In SMP mode up_irq_save() probably only disables interrupts
-   * on the local CPU.  We do not want to call enter_critical_section()
-   * here, however, because we don't want this state to stick after the
-   * call to up_fullcontextrestore().
    */
 
-  sinfo("Resuming\n");
+  sinfo("Resuming EPC: %08x INT_CTX: %08x\n", regs[REG_EPC], regs[REG_INT_CTX]);
 
   (void)up_irq_save();
   rtcb->pterrno = saved_errno;
 
-  /* Then restore the correct state for this thread of execution. */
+  /* Then restore the correct state for this thread of
+   * execution.
+   */
 
   board_autoled_off(LED_SIGNAL);
   up_fullcontextrestore(regs);
+
+  /* up_fullcontextrestore() should not return but could if the software
+   * interrupts are disabled.
+   */
+
+  PANIC();
 }
 
 #endif /* !CONFIG_DISABLE_SIGNALS */
