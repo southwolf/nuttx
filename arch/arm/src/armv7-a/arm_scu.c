@@ -1,7 +1,7 @@
 /****************************************************************************
- * arch/arm/include/armv7-a/spinlock.h
+ * arch/arm/src/armv7-a/arm_undefinedinsn.c
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2013, 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,28 +33,34 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_INCLUDE_ARMV7_A_SPINLOCK_H
-#define __ARCH_ARM_INCLUDE_ARMV7_A_SPINLOCK_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
 
+#include "up_arch.h"
+#include "scu.h"
+
+#ifdef CONFIG_SMP
+
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
-/* Not a useful feature */
 
-#undef SMP_INTERCPU_NONCACHED
+/****************************************************************************
+ * Name: arm_enable_smp
+ *
+ * Description:
+ *   Enable the SCU and make certain that current CPU is participating in
+ *   the SMP cache coherency.
+ *
+ ****************************************************************************/
 
-#if defined(CONFIG_SMP) && defined(SMP_INTERCPU_NONCACHED)
-  /* In SMP configurations, save spinlocks and other inter-CPU communications
-   * data in a non-cached memory region.
-   */
+void arm_enable_smp(int cpu)
+{
+ modifyreg32(SCU_CONFIG, 0, SCU_CONFIG_CPU_SMP(cpu));
+ modifyreg32(SCU_CTRL, 0, SCU_CTRL_ENABLE);
+}
 
-#  define SP_SECTION __attribute__((section(".nocache")))
 #endif
-
-#endif /* __ARCH_ARM_INCLUDE_ARMV7_A_SPINLOCK_H */
