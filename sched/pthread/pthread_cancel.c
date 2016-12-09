@@ -45,6 +45,7 @@
 #include <errno.h>
 
 #include "sched/sched.h"
+#include "task/task.h"
 #include "pthread/pthread.h"
 
 /****************************************************************************
@@ -76,7 +77,7 @@ int pthread_cancel(pthread_t thread)
       return ESRCH;
     }
 
-  DEBUGASSERT((tcb-cmn.flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_PTHREAD);
+  DEBUGASSERT((tcb->cmn.flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_PTHREAD);
 
   /* Check to see if this thread has the non-cancelable bit set in its
    * flags. Suppress context changes for a bit so that the flags are stable.
@@ -103,6 +104,35 @@ int pthread_cancel(pthread_t thread)
       sched_unlock();
       return OK;
     }
+
+#ifdef CONFIG_CANCELLATION_POINTS
+  /* Check if this thread supports deferred cancellation */
+
+  if ((tcb->cmn.flags & TCB_FLAG_CANCEL_DEFERRED) != 0)
+    {
+      /* Then we cannot cancel the thread asynchronoulsy.  Mark the cancellation
+       * as pending.
+       */
+
+      tcb->cmn.flags |= TCB_FLAG_CANCEL_PENDING;
+
+      /* If the thread is waiting at a cancellation point, then notify of the
+       * cancellation thereby waking the task up with an ECANCELED error.
+       *
+       * REVISIT: is locking the scheduler sufficent in SMP mode?
+       */
+
+      if (tcb->cmn.cpcount > 0)
+        {
+          notify_cancellation(&tcb->cmn);
+        }
+
+      sched_unlock();
+      return OK;
+    }
+#endif
+
+  /* Otherwise, perform the asyncrhonous cancellation */
 
   sched_unlock();
 
