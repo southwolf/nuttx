@@ -1,5 +1,5 @@
 /****************************************************************************
- * libc/pthread/pthread_setcanceltype.c
+ * libc/sched/task_setcanceltype.c
  *
  *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -37,56 +37,38 @@
  * Included Files
  ****************************************************************************/
 
-#include <pthread.h>
 #include <sched.h>
 #include <errno.h>
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-/* The following are defined in different header files but must have the
- * same values.
- */
-
-#if PTHREAD_CANCEL_DEFERRED != TASK_CANCEL_DEFERRED
-#  error We must have  PTHREAD_CANCEL_DEFERRED == TASK_CANCEL_DEFERRED
-#endif
-
-#if PTHREAD_CANCEL_ASYNCHRONOUS != TASK_CANCEL_ASYNCHRONOUS
-#  error We must have  PTHREAD_CANCEL_ASYNCHRONOUS == TASK_CANCEL_ASYNCHRONOUS
-#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pthread_setcancelstate
+ * Name: task_setcancelstate
  *
  * Description:
- *   The pthread_setcanceltype() function atomically both sets the calling
- *   thread's cancelability type to the indicated type and returns the
+ *   The task_setcanceltype() function atomically both sets the calling
+ *   task's cancelability type to the indicated type and returns the
  *   previous cancelability type at the location referenced by oldtype
- *   Legal values for type are PTHREAD_CANCEL_DEFERRED and
- *   PTHREAD_CANCEL_ASYNCHRONOUS.
+ *   Legal values for type are TASK_CANCEL_DEFERRED and
+ *   TASK_CANCEL_ASYNCHRONOUS.
  *
- *   The cancelability state and type of any newly created threads,
- *   including the thread in which main() was first invoked, are
- *   PTHREAD_CANCEL_ENABLE and PTHREAD_CANCEL_DEFERRED respectively.
+ *   The cancelability state and type of any newly created tasks are
+ *   TASK_CANCEL_ENABLE and TASK_CANCEL_DEFERRED respectively.
  *
  ****************************************************************************/
 
-int pthread_setcanceltype(int type, FAR int *oldtype)
+int task_setcanceltype(int type, FAR int *oldtype)
 {
-  int ret;
+  /* Return the current type if so requrested */
 
-  /* task_setcanceltype() can do this */
-
-  ret = task_setcanceltype(type, oldtype);
-  if (ret < 0)
+  if (oldtype != NULL)
     {
-      ret = errno;
+      *oldtype = TASK_CANCEL_ASYNCHRONOUS;
     }
 
-  return ret;
+  /* Check the requested cancellation type */
+
+  return (type == TASK_CANCEL_ASYNCHRONOUS) ? OK : ENOSYS;
 }

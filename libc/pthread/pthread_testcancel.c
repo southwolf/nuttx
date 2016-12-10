@@ -38,6 +38,7 @@
  ****************************************************************************/
 
 #include <pthread.h>
+#include <sched.h>
 
 /****************************************************************************
  * Public Functions
@@ -55,4 +56,7 @@
 
 void pthread_testcancel(void)
 {
+  /* task_testcancel() does the real work */
+
+  task_testcancel();
 }

@@ -1,7 +1,7 @@
 /****************************************************************************
- * libc/pthread/pthread_setcanceltype.c
+ * libc/pthread/pthread_setcancelstate.c
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2007, 2008, 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,23 +37,23 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <pthread.h>
 #include <sched.h>
 #include <errno.h>
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
-/* The following are defined in different header files but must have the
- * same values.
- */
+/* These are defined in different header files but must have the same values. */
 
-#if PTHREAD_CANCEL_DEFERRED != TASK_CANCEL_DEFERRED
-#  error We must have  PTHREAD_CANCEL_DEFERRED == TASK_CANCEL_DEFERRED
+#if PTHREAD_CANCEL_ENABLE != TASK_CANCEL_ENABLE
+#  error We must have  PTHREAD_CANCEL_ENABLE == TASK_CANCEL_ENABLE
 #endif
 
-#if PTHREAD_CANCEL_ASYNCHRONOUS != TASK_CANCEL_ASYNCHRONOUS
-#  error We must have  PTHREAD_CANCEL_ASYNCHRONOUS == TASK_CANCEL_ASYNCHRONOUS
+#if PTHREAD_CANCEL_DISABLE != TASK_CANCEL_DISABLE
+#  error We must have  PTHREAD_CANCEL_DISABLE == TASK_CANCEL_DISABLE
 #endif
 
 /****************************************************************************
@@ -64,11 +64,11 @@
  * Name: pthread_setcancelstate
  *
  * Description:
- *   The pthread_setcanceltype() function atomically both sets the calling
- *   thread's cancelability type to the indicated type and returns the
- *   previous cancelability type at the location referenced by oldtype
- *   Legal values for type are PTHREAD_CANCEL_DEFERRED and
- *   PTHREAD_CANCEL_ASYNCHRONOUS.
+ *   The pthread_setcancelstate() function atomically both sets the calling
+ *   thread's cancelability state to the indicated state and returns the
+ *   previous cancelability state at the location referenced by oldstate.
+ *   Legal values for state are PTHREAD_CANCEL_ENABLE and
+ *   PTHREAD_CANCEL_DISABLE.
  *
  *   The cancelability state and type of any newly created threads,
  *   including the thread in which main() was first invoked, are
@@ -76,13 +76,13 @@
  *
  ****************************************************************************/
 
-int pthread_setcanceltype(int type, FAR int *oldtype)
+int pthread_setcancelstate(int state, FAR int *oldstate)
 {
   int ret;
 
-  /* task_setcanceltype() can do this */
+  /* task_setcancelstate() can do this */
 
-  ret = task_setcanceltype(type, oldtype);
+  ret = task_setcancelstate(state, oldstate);
   if (ret < 0)
     {
       ret = errno;
