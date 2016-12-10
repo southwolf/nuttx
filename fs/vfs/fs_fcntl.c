@@ -45,7 +45,7 @@
 #include <assert.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 
@@ -223,7 +223,7 @@ int fcntl(int fd, int cmd, ...)
 
   /* fcntl() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* Setup to access the variable argument list */
 

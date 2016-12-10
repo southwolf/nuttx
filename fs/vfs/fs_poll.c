@@ -48,7 +48,7 @@
 
 #include <nuttx/clock.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 
@@ -368,7 +368,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
 
   /* poll() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* This semaphore is used for signaling and, hence, should not have
    * priority inheritance enabled.

@@ -43,7 +43,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 
 #include "tcp/tcp.h"
 #include "udp/udp.h"
@@ -126,7 +126,7 @@ ssize_t psock_send(FAR struct socket *psock, FAR const void *buf, size_t len,
 
   /* Treat as a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   switch (psock->s_type)
     {
@@ -273,7 +273,7 @@ ssize_t send(int sockfd, FAR const void *buf, size_t len, int flags)
 
   /* send() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* Get the underlying socket structure */
 

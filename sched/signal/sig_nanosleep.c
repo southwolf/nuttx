@@ -46,7 +46,7 @@
 
 #include <nuttx/clock.h>
 #include <nuttx/irq.h>
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 
 #include "clock/clock.h"
 
@@ -115,7 +115,7 @@ int nanosleep(FAR const struct timespec *rqtp, FAR struct timespec *rmtp)
 
   /* nanosleep() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   if (!rqtp || rqtp->tv_nsec < 0 || rqtp->tv_nsec >= 1000000000)
     {

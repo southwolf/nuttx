@@ -48,7 +48,7 @@
 #include <stdarg.h>
 #endif
 
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
@@ -105,7 +105,7 @@ int open(const char *path, int oflags, ...)
 
   /* open() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* If the file is opened for creation, then get the mode bits */
 

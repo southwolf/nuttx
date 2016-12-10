@@ -45,7 +45,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 #include <nuttx/net/net.h>
 
 #include "udp/udp.h"
@@ -314,7 +314,7 @@ ssize_t sendto(int sockfd, FAR const void *buf, size_t len, int flags,
 
   /* sendto() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* Get the underlying socket structure */
 

@@ -43,7 +43,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 
 /****************************************************************************
@@ -145,7 +145,7 @@ ssize_t pread(int fd, FAR void *buf, size_t nbytes, off_t offset)
 
   /* pread() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* Get the file structure corresponding to the file descriptor. */
 

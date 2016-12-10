@@ -45,7 +45,7 @@
 #include <assert.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
@@ -122,7 +122,7 @@ int fsync(int fd)
 
   /* fsync() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* Get the file structure corresponding to the file descriptor. */
 

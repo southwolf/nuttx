@@ -46,7 +46,7 @@
 #include <sched.h>
 #include <errno.h>
 
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 
 #include "inode/inode.h"
 
@@ -138,7 +138,7 @@ ssize_t read(int fd, FAR void *buf, size_t nbytes)
 
   /* read() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* Did we get a valid file descriptor? */
 

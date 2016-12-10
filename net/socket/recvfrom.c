@@ -57,7 +57,7 @@
 
 #include <nuttx/clock.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/iob.h>
 #include <nuttx/net/netdev.h>
@@ -1854,7 +1854,7 @@ ssize_t psock_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
 
   /* Treat as a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* Verify that non-NULL pointers were passed */
 
@@ -2087,7 +2087,7 @@ ssize_t recvfrom(int sockfd, FAR void *buf, size_t len, int flags,
 
   /* recvfrom() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* Get the underlying socket structure */
 

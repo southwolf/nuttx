@@ -50,7 +50,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 
 #include "clock/clock.h"
 #include "sched/sched.h"
@@ -181,7 +181,7 @@ int mq_timedsend(mqd_t mqdes, FAR const char *msg, size_t msglen, int prio,
 
   /* mq_timedsend() is a cancellation point */
 
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
 
   /* Verify the input parameters -- setting errno appropriately
    * on any failures to verify.

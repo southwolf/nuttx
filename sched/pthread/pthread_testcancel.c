@@ -42,7 +42,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#include <nuttx/pthread.h>
+#include <nuttx/cancelpt.h>
 
 #include "sched/sched.h"
 
@@ -62,6 +62,6 @@
 
 void pthread_testcancel(void)
 {
-  enter_cancellation_point();
+  (void)enter_cancellation_point();
   leave_cancellation_point();
 }
