@@ -40,6 +40,7 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
+#include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
@@ -148,6 +149,17 @@
 #define ESP32_PRIO_INDEX(p)    ((p) - ESP32_MIN_PRIORITY)
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* Maps a CPU interrupt to the attached peripheral interrupt */
+
+uint8_t g_cpu0_intmap[ESP32_NCPUINTS];
+#ifdef CONFIG_SMP
+uint8_t g_cpu1_intmap[ESP32_NCPUINTS];
+#endif
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -156,13 +168,9 @@
  */
 
 #ifdef CONFIG_SMP
-
 static uint32_t g_intenable[CONFIG_SMP_NCPUS];
-
 #else
-
 static uint32_t g_intenable[1];
-
 #endif
 
 /* Bitsets for free, unallocated CPU interrupts available to peripheral
@@ -170,11 +178,8 @@ static uint32_t g_intenable[1];
  */
 
 static uint32_t g_cpu0_freeints = EPS32_CPUINT_PERIPHSET;
-
 #ifdef CONFIG_SMP
-
 static uint32_t g_cpu1_freeints = EPS32_CPUINT_PERIPHSET;
-
 #endif
 
 /* Bitsets for each interrupt priority 1-5 */
@@ -191,6 +196,20 @@ static const uint32_t g_priority[5] =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: xtensa_disable_all
+ ****************************************************************************/
+
+static inline void xtensa_disable_all(void)
+{
+  __asm__ __volatile__
+  (
+    "movi a2, 0\n"
+    "xsr a2, INTENABLE\n"
+    : : : "a2"
+  );
+}
 
 /****************************************************************************
  * Name:  esp32_alloc_cpuint
@@ -278,6 +297,94 @@ int esp32_alloc_cpuint(uint32_t intmask)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name:  esp32_cpuint_initialize
+ *
+ * Description:
+ *   Initialize CPU interrupts
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned on
+ *   any failre.
+ *
+ ****************************************************************************/
+
+int esp32_cpuint_initialize(void)
+{
+  uintptr_t regaddr;
+  uint8_t *intmap;
+#ifdef CONFIG_SMP
+  int cpu;
+#endif
+  int i;
+
+#ifdef CONFIG_SMP
+  /* Which CPU are we initializing */
+
+  cpu = up_cpu_index();
+  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
+#endif
+
+  /* Disable all CPU interrupts on this CPU */
+
+  xtensa_disable_all();
+
+  /* Detach all peripheral sources PRO CPU interrupts */
+
+  for (i = 0; i < ESP32_NPERIPHERALS; i++)
+    {
+#ifdef CONFIG_SMP
+      if (cpu != 0)
+        {
+          regaddr = DPORT_APP_MAP_REGADDR(i);
+        }
+      else
+#endif
+        {
+          regaddr = DPORT_PRO_MAP_REGADDR(i);
+        }
+
+      putreg32(NO_CPUINT, regaddr);
+    }
+
+  /* Initialize CPU0-to-peripheral mapping table */
+
+#ifdef CONFIG_SMP
+  if (cpu != 0)
+    {
+      intmap = g_cpu1_intmap;
+    }
+  else
+#endif
+    {
+      intmap = g_cpu0_intmap;
+    }
+
+  /* Indiate that no peripheral interrupts are assigned to CPU interrupts */
+
+  memset(intmap, CPUINT_UNASSIGNED, ESP32_NCPUINTS);
+
+  /* Special case the 6 internal interrupts.
+   *
+   *   CPU interrupt bit           IRQ number
+   *   --------------------------- ---------------------
+   *   ESP32_CPUINT_TIMER0      6  XTENSA_IRQ_TIMER0  0
+   *   SP32_CPUINT_SOFTWARE0    7  Not yet defined
+   *   ESP32_CPUINT_PROFILING  11  Not yet defined
+   *   ESP32_CPUINT_TIMER1     15  XTENSA_IRQ_TIMER1  1
+   *   ESP32_CPUINT_TIMER2     16  XTENSA_IRQ_TIMER2  2
+   *   ESP32_CPUINT_SOFTWARE1  29  Not yet defined
+   */
+
+  intmap[ESP32_CPUINT_TIMER0] = XTENSA_IRQ_TIMER0;
+  intmap[ESP32_CPUINT_TIMER1] = XTENSA_IRQ_TIMER1;
+  intmap[ESP32_CPUINT_TIMER2] = XTENSA_IRQ_TIMER2;
+  return OK;
+}
 
 /****************************************************************************
  * Name: up_disable_irq
@@ -442,8 +549,10 @@ void esp32_free_cpuint(int cpuint)
  *
  * Input Parameters:
  *   cpu      - The CPU to receive the interrupt 0=PRO CPU 1=APP CPU
- *   periphid - The peripheral number from ira.h to be assigned.
+ *   periphid - The peripheral number from ira.h to be assigned to
+ *              a CPU interrupt.
  *   cpuint   - The CPU interrupt to receive the peripheral interrupt
+ *              assignment.
  *
  * Returned Value:
  *   None
@@ -453,6 +562,7 @@ void esp32_free_cpuint(int cpuint)
 void esp32_attach_peripheral(int cpu, int periphid, int cpuint)
 {
   uintptr_t regaddr;
+  uint8_t *intmap;
 
   DEBUGASSERT(periphid >= 0 && periphid < ESP32_NPERIPHERALS);
   DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32_CPUINT_MAX);
@@ -462,12 +572,17 @@ void esp32_attach_peripheral(int cpu, int periphid, int cpuint)
   if (cpu != 0)
     {
       regaddr = DPORT_APP_MAP_REGADDR(periphid);
+      intmap  = g_cpu1_intmap;
     }
   else
 #endif
     {
       regaddr = DPORT_PRO_MAP_REGADDR(periphid);
+      intmap  = g_cpu0_intmap;
     }
+
+  DEBUGASSERT(intmap[cpuint] == CPUINT_UNASSIGNED);
+  intmap[cpuint] = periphid + XTENSA_IRQ_FIRSTPERIPH;
 
   putreg32(cpuint, regaddr);
 }
@@ -479,17 +594,21 @@ void esp32_attach_peripheral(int cpu, int periphid, int cpuint)
  *   Detach a peripheral interupt from a CPU interrupt.
  *
  * Input Parameters:
- *   cpu    - The CPU to receive the interrupt 0=PRO CPU 1=APP CPU
- *   periphid - The peripheral number from ira.h to be assigned.
+ *   cpu      - The CPU to receive the interrupt 0=PRO CPU 1=APP CPU
+ *   periphid - The peripheral number from irq.h to be detached from the
+ *              CPU interrupt.
+ *   cpuint   - The CPU interrupt from which the peripheral interrupt will
+ *              be detached.
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void esp32_detach_peripheral(int cpu, int periphid)
+void esp32_detach_peripheral(int cpu, int periphid, int cpuint)
 {
   uintptr_t regaddr;
+  uint8_t *intmap;
 
   DEBUGASSERT(periphid >= 0 && periphid < ESP32_NPERIPHERALS);
 #ifdef CONFIG_SMP
@@ -498,12 +617,17 @@ void esp32_detach_peripheral(int cpu, int periphid)
   if (cpu != 0)
     {
       regaddr = DPORT_APP_MAP_REGADDR(periphid);
+      intmap  = g_cpu1_intmap;
     }
   else
 #endif
     {
       regaddr = DPORT_PRO_MAP_REGADDR(periphid);
+      intmap  = g_cpu0_intmap;
     }
+
+  DEBUGASSERT(intmap[cpuint] != CPUINT_UNASSIGNED);
+  intmap[cpuint] = CPUINT_UNASSIGNED;
 
   putreg32(NO_CPUINT, regaddr);
 }
