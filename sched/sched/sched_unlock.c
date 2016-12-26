@@ -44,6 +44,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/sched_note.h>
 
+#include "irq/irq.h"
 #include "sched/sched.h"
 
 /****************************************************************************
@@ -102,8 +103,7 @@ int sched_unlock(void)
 
 #ifdef CONFIG_SMP
           /* The lockcount has decremented to zero and we need to perform
-           * release our hold on the lock.  Pre-emption may still be locked
-           * from other CPUs.
+           * release our hold on the lock.
            */
 
           DEBUGASSERT(g_cpu_schedlock == SP_LOCKED &&
@@ -114,17 +114,32 @@ int sched_unlock(void)
 #endif
 
           /* Release any ready-to-run tasks that have collected in
-           * g_pendingtasks.  In the SMP case, the scheduler remains
-           * locked if interrupts are disabled.
+           * g_pendingtasks.
            *
            * NOTE: This operation has a very high likelihood of causing
            * this task to be switched out!
-           *
-           * NOTE: In SMP mode, pre-emption may still be locked due to
-           * operations on other CPUs.
+           */
+
+#ifdef CONFIG_SMP
+          /* In the SMP case, the tasks remains pend(1) if we are
+           * in a critical section, i.e., g_cpu_irqlock is locked , or (2)
+           * other CPUs still have pre-emption disabled, i.e.,
+           * g_cpu_schedlock is locked.  In those cases, the release of the
+           * pending tasks must be deferred until those conditions are met.ing 
+           */
+
+          if (!spin_islocked(&g_cpu_schedlock) &&
+              !spin_islocked(&g_cpu_irqlock) &&
+              g_pendingtasks.head != NULL)
+#else
+          /* In the single CPU case, decrementing irqcount to zero is
+           * sufficient to release the pending tasks.  Further, in that
+           * configuration, critical sections and pre-emption can operate
+           * fully independently.
            */
 
           if (g_pendingtasks.head != NULL)
+#endif
             {
               up_release_pending();
             }

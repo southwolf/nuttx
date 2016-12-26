@@ -507,6 +507,30 @@ void leave_critical_section(irqstate_t flags)
               rtcb->irqcount = 0;
               spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
                           &g_cpu_irqlock);
+
+              /* Have all CPUs released the lock? */
+
+              if (!spin_islocked(&g_cpu_irqlock))
+                {
+                  /* Check if there are pending tasks and that pre-emption
+                   * is also enabled.  This is necessary becaue we may have
+                   * deferred the up_release_pending() call in sched_unlock()
+                   * because we were within a critical section then.
+                   */
+
+                  if (g_pendingtasks.head != NULL &&
+                      !spin_islocked(&g_cpu_schedlock))
+                    {
+                      /* Release any ready-to-run tasks that have collected
+                       * in g_pendingtasks if the scheduler is not locked.
+                       *
+                       * NOTE: This operation has a very high likelihood of
+                       * causing this task to be switched out!
+                       */
+
+                      up_release_pending();
+                    }
+                }
             }
         }
     }
